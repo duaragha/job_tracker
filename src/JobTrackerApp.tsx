@@ -58,21 +58,25 @@ export default function JobTrackerApp() {
             position: "",
             location: "",
             status: "",
-            appliedDate: "",
-            rejectionDate: "",
+            appliedDate: null,
+            rejectionDate: null,
             jobSite: "",
             url: "",
-            created_at: new Date().toISOString(), // optional but nice for sorting
+            created_at: new Date().toISOString(), // optional
         };
 
         const { data, error } = await supabase.from("jobs").insert([newJob]);
 
-        if (error) {
-            console.error("Error inserting job:", error);
-        } else {
-            setJobs([newJob, ...jobs]); // optionally refetch jobs instead
+        if (error || !data) {
+            console.error("Error inserting job:", error?.message || "No data returned");
+            alert("Failed to add job. Check console for details.");
+            return;
         }
+
+        setJobs((prev) => [data[0], ...prev]); // safe now
     };
+
+
 
     const handleSort = (key) => {
         const direction =
