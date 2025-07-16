@@ -345,12 +345,13 @@ export default function JobTrackerApp() {
                                         </td>
                                     ))}
                                     {/* ✅ Save button cell */}
-                                    <td className="p-2">
+                                    <td className="p-1">
                                         <button
                                             onClick={() => saveJobToDB(index)}
-                                            className="bg-green-600 text-white px-2.5 py-0.5 text-sm rounded hover:bg-green-700"
+                                            className="bg-green-600 text-white text-xs px-2 py-0.5 leading-none rounded hover:bg-green-700"
+                                            style={{ paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', lineHeight: '1' }}
                                         >
-                                            Save
+                                            💾 Save
                                         </button>
                                     </td>
                                 </tr>
