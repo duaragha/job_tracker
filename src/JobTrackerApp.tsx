@@ -1,5 +1,5 @@
 // Main entry file: JobTrackerApp.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"
 import { supabase } from "./supabaseClient";
 
 export default function JobTrackerApp() {
@@ -28,26 +28,50 @@ export default function JobTrackerApp() {
     const [sortDirection, setSortDirection] = useState("asc");
     const [selectedMonth, setSelectedMonth] = useState("");
 
+    useEffect(() => {
+        const fetchJobs = async () => {
+            const { data, error } = await supabase
+                .from("jobs")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                console.error("Error fetching jobs:", error);
+            } else {
+                setJobs(data);
+            }
+        };
+
+        fetchJobs();
+    }, []);
+
+
     const handleChange = (index, key, value) => {
         const newJobs = [...jobs];
         newJobs[index][key] = value;
         setJobs(newJobs);
     };
 
-    const addRow = () => {
-        setJobs([
-            ...jobs,
-            {
-                company: "",
-                position: "",
-                location: "",
-                status: "",
-                appliedDate: "",
-                rejectionDate: "",
-                jobSite: "",
-                url: "",
-            },
-        ]);
+    const addRow = async () => {
+        const newJob = {
+            company: "",
+            position: "",
+            location: "",
+            status: "",
+            appliedDate: "",
+            rejectionDate: "",
+            jobSite: "",
+            url: "",
+            created_at: new Date().toISOString(), // optional but nice for sorting
+        };
+
+        const { data, error } = await supabase.from("jobs").insert([newJob]);
+
+        if (error) {
+            console.error("Error inserting job:", error);
+        } else {
+            setJobs([newJob, ...jobs]); // optionally refetch jobs instead
+        }
     };
 
     const handleSort = (key) => {
