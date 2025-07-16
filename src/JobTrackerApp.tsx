@@ -350,7 +350,7 @@ export default function JobTrackerApp() {
                                             onClick={() => saveJobToDB(index)}
                                             className="bg-green-600 text-white px-2.5 py-0.5 text-sm rounded hover:bg-green-700"
                                         >
-                                            💾 Save
+                                            Save
                                         </button>
                                     </td>
                                 </tr>
