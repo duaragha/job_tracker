@@ -76,7 +76,20 @@ export default function JobTrackerApp() {
         setJobs((prev) => [data[0], ...prev]); // safe now
     };
 
-
+    const saveJobToDB = async (index) => {
+        const job = jobs[index];
+        const { data, error } = await supabase.from("jobs").insert([job]).select();
+        if (error) {
+            console.error("Failed to save job:", error.message);
+            alert("Error saving job");
+        } else {
+            console.log("Saved:", data);
+            alert("Job saved to Supabase!");
+            const updatedJobs = [...jobs];
+            updatedJobs[index] = data[0];
+            setJobs(updatedJobs);
+        }
+    };
 
     const handleSort = (key) => {
         const direction =
@@ -310,6 +323,15 @@ export default function JobTrackerApp() {
                                             )}
                                         </td>
                                     ))}
+                                    {/* ✅ Save button cell */}
+                                    <td className="p-2">
+                                        <button
+                                            onClick={() => saveJobToDB(index)}
+                                            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                                        >
+                                            💾 Save
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
