@@ -65,7 +65,7 @@ export default function JobTrackerApp() {
             created_at: new Date().toISOString(), // optional
         };
 
-        const { data, error } = await supabase.from("jobs").insert([newJob]);
+        const { data, error } = await supabase.from("jobs").insert([newJob]).select();
 
         if (error || !data) {
             console.error("Error inserting job:", error?.message || "No data returned");
