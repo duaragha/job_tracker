@@ -13,6 +13,7 @@ export default function JobTrackerApp() {
 
     const [jobs, setJobs] = useState([
         {
+            id: undefined,
             company: "",
             position: "",
             location: "",
@@ -78,16 +79,36 @@ export default function JobTrackerApp() {
 
     const saveJobToDB = async (index) => {
         const job = jobs[index];
-        const { data, error } = await supabase.from("jobs").insert([job]).select();
-        if (error) {
-            console.error("Failed to save job:", error.message);
-            alert("Error saving job");
+
+        if (job.id) {
+            // Update existing row
+            const { error } = await supabase
+                .from("jobs")
+                .update(job)
+                .eq("id", job.id);
+
+            if (error) {
+                console.error("Error updating job:", error.message);
+                alert("Failed to update job.");
+            } else {
+                console.log("Job updated");
+            }
         } else {
-            console.log("Saved:", data);
-            alert("Job saved to Supabase!");
-            const updatedJobs = [...jobs];
-            updatedJobs[index] = data[0];
-            setJobs(updatedJobs);
+            // Insert new row
+            const { data, error } = await supabase
+                .from("jobs")
+                .insert([job])
+                .select();
+
+            if (error || !data) {
+                console.error("Error inserting job:", error?.message || "No data returned");
+                alert("Failed to save job.");
+            } else {
+                const updatedJobs = [...jobs];
+                updatedJobs[index] = data[0]; // Replace the inserted row with the one returned (with ID)
+                setJobs(updatedJobs);
+                console.log("Job inserted");
+            }
         }
     };
 
