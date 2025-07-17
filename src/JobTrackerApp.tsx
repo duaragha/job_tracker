@@ -169,56 +169,58 @@ export default function JobTrackerApp() {
 
     const totalApplications = jobs.length;
     const appliedCount = jobs.filter((job) => job.status === "Applied").length;
-    const interviewingCount = jobs.filter(
-        (job) => job.status === "Interviewing"
-    ).length;
+    const interviewingCount = jobs.filter((job) => job.status === "Interviewing").length;
     const rejectedCount = jobs.filter((job) => job.status === "Rejected").length;
-
-    const monthTotal = jobsForMonth.length;
-    const monthApplied = jobsForMonth.filter(
-        (job) => job.status === "Applied"
-    ).length;
-    const monthInterview = jobsForMonth.filter(
-        (job) => job.status === "Interviewing"
-    ).length;
-    const monthRejected = jobsForMonth.filter(
-        (job) => job.status === "Rejected"
-    ).length;
+    const assessmentCount = jobs.filter((job) => job.status === "Assessment").length;
+    const screeningCount = jobs.filter((job) => job.status === "Screening").length;
 
     const percent = (count, total = totalApplications) =>
         total ? ((count / total) * 100).toFixed(1) : "0.0";
 
+    const appliedPct = percent(appliedCount);
+    const interviewingPct = percent(interviewingCount);
+    const rejectedPct = percent(rejectedCount);
+    const assessmentPct = percent(assessmentCount);
+    const screeningPct = percent(screeningCount);
+
+    const monthTotal = jobsForMonth.length;
+    const monthApplied = jobsForMonth.filter((job) => job.status === "Applied").length;
+    const monthInterview = jobsForMonth.filter((job) => job.status === "Interviewing").length;
+    const monthRejected = jobsForMonth.filter((job) => job.status === "Rejected").length;
+
     return (
+        
         <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-slate-200 p-6">
-            <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-6 tracking-tight">
+            <h1 className="text-4xl font-extrabold text-center text-gray-900 mb-10">
                 📋 Job Application Tracker
             </h1>
 
-            <div className="max-w-6xl mx-auto mb-6 grid grid-cols-1 sm:grid-cols-4 gap-6 text-center">
-                <div className="bg-white shadow-lg rounded-xl p-4">
-                    <p className="text-xs text-gray-500">Total Applications</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                        {totalApplications}
-                    </p>
-                </div>
-                <div className="bg-blue-50 shadow-lg rounded-xl p-4">
-                    <p className="text-xs text-blue-600 font-medium">Applied</p>
-                    <p className="text-xl font-semibold">
-                        {appliedCount} ({percent(appliedCount)}%)
-                    </p>
-                </div>
-                <div className="bg-yellow-50 shadow-lg rounded-xl p-4">
-                    <p className="text-xs text-yellow-600 font-medium">Interviewing</p>
-                    <p className="text-xl font-semibold">
-                        {interviewingCount} ({percent(interviewingCount)}%)
-                    </p>
-                </div>
-                <div className="bg-red-50 shadow-lg rounded-xl p-4">
-                    <p className="text-xs text-red-600 font-medium">Rejected</p>
-                    <p className="text-xl font-semibold">
-                        {rejectedCount} ({percent(rejectedCount)}%)
-                    </p>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-10">
+                {[
+                    { label: "Applied", value: appliedCount, percent: appliedPct, color: "bg-indigo-500" },
+                    { label: "Assessment", value: assessmentCount, percent: assessmentPct, color: "bg-yellow-500" },
+                    { label: "Screening", value: screeningCount, percent: screeningPct, color: "bg-purple-500" },
+                    { label: "Interviewing", value: interviewingCount, percent: interviewingPct, color: "bg-blue-500" },
+                    { label: "Rejected", value: rejectedCount, percent: rejectedPct, color: "bg-red-500" },
+                    { label: "Total Applications", value: totalApplications, percent: "", color: "bg-green-500" },
+                ].map(({ label, value, percent, color }) => (
+                    <div
+                        key={label}
+                        className={`rounded-xl shadow-lg p-6 ${color} bg-opacity-90 transform hover:scale-105 transition-transform duration-200`}
+                    >
+                        <div className="text-sm uppercase tracking-wider font-semibold text-white/80">
+                            {label}
+                        </div>
+                        <div className="text-3xl font-bold mt-2 text-white">
+                            {value}
+                            {percent && (
+                                <span className="text-sm font-medium ml-2 text-white/70">
+                                    ({percent}%)
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))}
             </div>
 
             <div className="max-w-6xl mx-auto mb-8">
