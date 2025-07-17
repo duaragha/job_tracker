@@ -34,12 +34,14 @@ export default function JobTrackerApp() {
             const { data, error } = await supabase
                 .from("jobs")
                 .select("*")
-                .order("created_at", { ascending: false });
+                .order("appliedDate", { ascending: false }); // newest first
 
             if (error) {
                 console.error("Error fetching jobs:", error);
             } else {
                 setJobs(data);
+                setSortKey("appliedDate");
+                setSortDirection("desc");
             }
         };
 
@@ -117,11 +119,24 @@ export default function JobTrackerApp() {
             sortKey === key && sortDirection === "asc" ? "desc" : "asc";
         setSortKey(key);
         setSortDirection(direction);
+
         const sortedJobs = [...jobs].sort((a, b) => {
-            if (a[key] < b[key]) return direction === "asc" ? -1 : 1;
-            if (a[key] > b[key]) return direction === "asc" ? 1 : -1;
-            return 0;
+            const valA = a[key];
+            const valB = b[key];
+
+            if (key.toLowerCase().includes("date")) {
+                // Convert to timestamps for date sorting
+                const dateA = valA ? new Date(valA).getTime() : 0;
+                const dateB = valB ? new Date(valB).getTime() : 0;
+                return direction === "asc" ? dateA - dateB : dateB - dateA;
+            } else {
+                // Fallback for text
+                return direction === "asc"
+                    ? (valA || "").toString().localeCompare((valB || "").toString())
+                    : (valB || "").toString().localeCompare((valA || "").toString());
+            }
         });
+
         setJobs(sortedJobs);
     };
 
