@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { supabase } from "./supabaseClient";
 
 export default function JobTrackerApp() {
@@ -28,6 +28,8 @@ export default function JobTrackerApp() {
     const [sortDirection, setSortDirection] = useState("asc");
     const [selectedMonth, setSelectedMonth] = useState("");
     const [openMonths, setOpenMonths] = useState([]);
+    const saveTimeouts = useRef({});
+
 
     useEffect(() => {
         const fetchJobs = async () => {
@@ -52,6 +54,15 @@ export default function JobTrackerApp() {
         const newJobs = [...jobs];
         newJobs[index][key] = value;
         setJobs(newJobs);
+
+        if (saveTimeouts.current[index]) {
+            clearTimeout(saveTimeouts.current[index]);
+        }
+
+        saveTimeouts.current[index] = setTimeout(() => {
+            saveJobToDB(index);
+            delete saveTimeouts.current[index];
+        }, 1500);
     };
 
     const addRow = async () => {
