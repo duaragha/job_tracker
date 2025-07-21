@@ -29,6 +29,8 @@ export default function JobTrackerApp() {
     const [selectedMonth, setSelectedMonth] = useState("");
     const [openMonths, setOpenMonths] = useState([]);
     const saveTimeouts = useRef({});
+    const [savingStatus, setSavingStatus] = useState({});
+
 
 
     useEffect(() => {
@@ -55,15 +57,27 @@ export default function JobTrackerApp() {
         newJobs[index][key] = value;
         setJobs(newJobs);
 
+        setSavingStatus((prev) => ({ ...prev, [index]: "Saving..." }));
+
         if (saveTimeouts.current[index]) {
             clearTimeout(saveTimeouts.current[index]);
         }
 
-        saveTimeouts.current[index] = setTimeout(() => {
-            saveJobToDB(index);
-            delete saveTimeouts.current[index];
+        saveTimeouts.current[index] = setTimeout(async () => {
+            await saveJobToDB(index);
+            setSavingStatus((prev) => ({ ...prev, [index]: "Saved ✅" }));
+
+            // Clear message after 2 seconds
+            setTimeout(() => {
+                setSavingStatus((prev) => {
+                    const newStatus = { ...prev };
+                    delete newStatus[index];
+                    return newStatus;
+                });
+            }, 2000);
         }, 1500);
     };
+
 
     const addRow = async () => {
         const newJob = {
@@ -313,14 +327,6 @@ export default function JobTrackerApp() {
                                                     )}
                                                 </td>
                                             ))}
-                                            <td className="p-2">
-                                                <button
-                                                    onClick={() => saveJobToDB(jobs.indexOf(job))}
-                                                    className="bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700"
-                                                >
-                                                    💾
-                                                </button>
-                                            </td>
                                         </tr>
                                     ))}
                             </tbody>
@@ -462,12 +468,9 @@ export default function JobTrackerApp() {
                                                         </td>
                                                     ))}
                                                     <td className="p-2">
-                                                        <button
-                                                            onClick={() => saveJobToDB(jobs.indexOf(job))}
-                                                            className="bg-green-600 text-white px-2 py-1 text-xs rounded hover:bg-green-700"
-                                                        >
-                                                            💾
-                                                        </button>
+                                                        {savingStatus[index] && (
+                                                            <div className="text-xs text-gray-500 mt-1">{savingStatus[index]}</div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))}
