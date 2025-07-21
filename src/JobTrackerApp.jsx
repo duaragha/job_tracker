@@ -84,11 +84,18 @@ export default function JobTrackerApp() {
     const saveJobToDB = async (index) => {
         const job = jobs[index];
 
+        // Convert empty date strings to null
+        const sanitizedJob = {
+            ...job,
+            appliedDate: job.appliedDate === "" ? null : job.appliedDate,
+            rejectionDate: job.rejectionDate === "" ? null : job.rejectionDate,
+        };
+
         if (job.id) {
             // Update existing row
             const { error } = await supabase
                 .from("jobs")
-                .update(job)
+                .update(sanitizedJob)
                 .eq("id", job.id);
 
             if (error) {
@@ -101,7 +108,7 @@ export default function JobTrackerApp() {
             // Insert new row
             const { data, error } = await supabase
                 .from("jobs")
-                .insert([job])
+                .insert([sanitizedJob])
                 .select();
 
             if (error || !data) {
@@ -115,6 +122,7 @@ export default function JobTrackerApp() {
             }
         }
     };
+
 
     const handleSort = (key) => {
         const direction =
