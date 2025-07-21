@@ -10,19 +10,8 @@ export default function JobTrackerApp() {
         "Screening",
     ];
 
-    const [jobs, setJobs] = useState([
-        {
-            id: undefined,
-            company: "",
-            position: "",
-            location: "",
-            status: "",
-            appliedDate: "",
-            rejectionDate: "",
-            jobSite: "",
-            url: "",
-        },
-    ]);
+    const [jobs, setJobs] = useState([]);
+    const [displayJobs, setDisplayJobs] = useState([]);
     const [filter, setFilter] = useState("");
     const [sortKey, setSortKey] = useState("");
     const [sortDirection, setSortDirection] = useState("asc");
@@ -34,12 +23,11 @@ export default function JobTrackerApp() {
             const { data, error } = await supabase
                 .from("jobs")
                 .select("*")
-                .order("appliedDate", { ascending: false }); // newest first
+                .order("appliedDate", { ascending: false });
 
-            if (error) {
-                console.error("Error fetching jobs:", error);
-            } else {
+            if (error) { console.error("Error fetching jobs:", error); } else {
                 setJobs(data);
+                setDisplayJobs(data);
                 setSortKey("appliedDate");
                 setSortDirection("desc");
             }
@@ -118,6 +106,7 @@ export default function JobTrackerApp() {
                 const updatedJobs = [...jobs];
                 updatedJobs[index] = data[0];
                 setJobs(updatedJobs);
+                setDisplayJobs(updatedJobs);
                 console.log("Job inserted");
             }
         }
@@ -166,7 +155,7 @@ export default function JobTrackerApp() {
 
     const uniqueMonths = Array.from(
         new Set(
-            jobs
+            displayJobs
                 .map((job) => getMonthYear(job.appliedDate))
                 .filter((val) => val && val !== "Invalid Date")
         )
@@ -378,7 +367,7 @@ export default function JobTrackerApp() {
                 </div>
             ) : (
                 uniqueMonths.map((month) => {
-                    const jobsInMonth = jobs.filter((j) => getMonthYear(j.appliedDate) === month);
+                    const jobsInMonth = displayJobs.filter((j) => getMonthYear(j.appliedDate) === month);
                     const stats = {
                         Applied: jobsInMonth.filter(j => j.status === "Applied").length,
                         Interviewing: jobsInMonth.filter(j => j.status === "Interviewing").length,
