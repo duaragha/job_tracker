@@ -91,6 +91,10 @@ export default function JobTrackerApp() {
                 alert("Failed to update job.");
             } else {
                 console.log("Job updated");
+                const updatedJobs = [...jobs];
+                updatedJobs[index] = sanitizedJob;
+                setJobs(updatedJobs);
+                setDisplayJobs(updatedJobs); // 👈 this ensures correct re-grouping
             }
         } else {
             // Insert new row
