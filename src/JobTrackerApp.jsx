@@ -1,4 +1,3 @@
-// Main entry file: JobTrackerApp.jsx
 import React, { useState, useEffect } from "react"
 import { supabase } from "./supabaseClient";
 
@@ -30,7 +29,6 @@ export default function JobTrackerApp() {
     const [selectedMonth, setSelectedMonth] = useState("");
     const [openMonths, setOpenMonths] = useState([]);
 
-
     useEffect(() => {
         const fetchJobs = async () => {
             const { data, error } = await supabase
@@ -50,7 +48,6 @@ export default function JobTrackerApp() {
         fetchJobs();
     }, []);
 
-
     const handleChange = (index, key, value) => {
         const newJobs = [...jobs];
         newJobs[index][key] = value;
@@ -67,7 +64,7 @@ export default function JobTrackerApp() {
             rejectionDate: null,
             jobSite: "",
             url: "",
-            created_at: new Date().toISOString(), // optional
+            created_at: new Date().toISOString(),
         };
 
         const { data, error } = await supabase.from("jobs").insert([newJob]).select();
@@ -78,13 +75,16 @@ export default function JobTrackerApp() {
             return;
         }
 
-        setJobs((prev) => [data[0], ...prev]); // safe now
+        setJobs((prev) => [data[0], ...prev]);
+    };
+
+    const removeId = (job) => {
+        const { id, ...rest } = job;
+        return rest;
     };
 
     const saveJobToDB = async (index) => {
         const job = jobs[index];
-
-        // Convert empty date strings to null
         const sanitizedJob = {
             ...job,
             appliedDate: job.appliedDate === "" ? null : job.appliedDate,
@@ -108,7 +108,7 @@ export default function JobTrackerApp() {
             // Insert new row
             const { data, error } = await supabase
                 .from("jobs")
-                .insert([sanitizedJob])
+                .insert([removeId(sanitizedJob)])
                 .select();
 
             if (error || !data) {
@@ -116,13 +116,12 @@ export default function JobTrackerApp() {
                 alert("Failed to save job.");
             } else {
                 const updatedJobs = [...jobs];
-                updatedJobs[index] = data[0]; // Replace the inserted row with the one returned (with ID)
+                updatedJobs[index] = data[0];
                 setJobs(updatedJobs);
                 console.log("Job inserted");
             }
         }
     };
-
 
     const handleSort = (key) => {
         const direction =
@@ -318,8 +317,6 @@ export default function JobTrackerApp() {
                     </div>
                 </div>
             )}
-
-
 
             {filter.trim() ? (
                 <div className="max-w-6xl mx-auto mb-10 bg-white shadow-lg rounded-xl overflow-hidden">
