@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, memo } from "react";
 import { supabase } from "./supabaseClient";
 
 export default function JobTrackerApp() {
@@ -225,6 +225,48 @@ export default function JobTrackerApp() {
         );
     };
 
+    const JobRow = memo(({ job, index, statusOptions, handleChange, savingStatus }) => {
+        return (
+            <tr key={job.id || index} className="border-t">
+                {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map((key) => (
+                    <td className="p-2" key={key}>
+                        {key === "status" ? (
+                            <select
+                                value={job[key]}
+                                onChange={(e) => handleChange(index, key, e.target.value)}
+                                className="w-full p-1 border border-gray-300 rounded"
+                            >
+                                <option value="">Select</option>
+                                {statusOptions.map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                        ) : key.includes("Date") ? (
+                            <input
+                                type="date"
+                                value={job[key] || ""}
+                                onChange={(e) => handleChange(index, key, e.target.value)}
+                                className="w-full p-1 border border-gray-300 rounded"
+                            />
+                        ) : (
+                            <input
+                                type="text"
+                                value={job[key]}
+                                onChange={(e) => handleChange(index, key, e.target.value)}
+                                className="w-full p-1 border border-gray-300 rounded"
+                            />
+                        )}
+                    </td>
+                ))}
+                <td className="p-2">
+                    {savingStatus[index] && (
+                        <div className="text-xs text-gray-500 mt-1">{savingStatus[index]}</div>
+                    )}
+                </td>
+            </tr>
+        );
+    });
+
     return (
         <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-slate-200 p-6">
             <h1 className="page-title">📋 Job Application Tracker</h1>
@@ -435,46 +477,21 @@ export default function JobTrackerApp() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {jobsInMonth.map((job, index) => (
-                                                <tr key={job.id || index} className="border-t">
-                                                    {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map((key) => (
-                                                        <td className="p-2" key={key}>
-                                                            {key === "status" ? (
-                                                                <select
-                                                                    value={job[key]}
-                                                                    onChange={(e) => handleChange(jobs.indexOf(job), key, e.target.value)}
-                                                                    className="w-full p-1 border border-gray-300 rounded"
-                                                                >
-                                                                    <option value="">Select</option>
-                                                                    {statusOptions.map((s) => (
-                                                                        <option key={s} value={s}>{s}</option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : key.includes("Date") ? (
-                                                                <input
-                                                                    type="date"
-                                                                    value={job[key] || ""}
-                                                                    onChange={(e) => handleChange(jobs.indexOf(job), key, e.target.value)}
-                                                                    className="w-full p-1 border border-gray-300 rounded"
-                                                                />
-                                                            ) : (
-                                                                <input
-                                                                    type="text"
-                                                                    value={job[key]}
-                                                                    onChange={(e) => handleChange(jobs.indexOf(job), key, e.target.value)}
-                                                                    className="w-full p-1 border border-gray-300 rounded"
-                                                                />
-                                                            )}
-                                                        </td>
-                                                    ))}
-                                                    <td className="p-2">
-                                                        {savingStatus[index] && (
-                                                            <div className="text-xs text-gray-500 mt-1">{savingStatus[index]}</div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {jobsInMonth.map((job) => {
+                                                const index = jobs.findIndex((j) => j.id === job.id);
+                                                return (
+                                                    <JobRow
+                                                        key={job.id || index}
+                                                        job={job}
+                                                        index={index}
+                                                        statusOptions={statusOptions}
+                                                        handleChange={handleChange}
+                                                        savingStatus={savingStatus}
+                                                    />
+                                                );
+                                            })}
                                         </tbody>
+
                                     </table>
                                 </div>
                             )}
