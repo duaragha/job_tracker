@@ -40,3 +40,36 @@
 .read-the-docs {
   color: #888;
 }
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #eee;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.stat-box {
+  padding: 1.5rem;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+.stat-box:hover {
+  transform: scale(1.05);
+}
+
+.bg-indigo-500 { background-color: #6366f1; }
+.bg-yellow-500 { background-color: #facc15; }
+.bg-purple-500 { background-color: #a855f7; }
+.bg-blue-500   { background-color: #3b82f6; }
+.bg-red-500    { background-color: #ef4444; }
+.bg-green-500  { background-color: #22c55e; }
