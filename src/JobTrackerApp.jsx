@@ -31,8 +31,6 @@ export default function JobTrackerApp() {
     const saveTimeouts = useRef({});
     const [savingStatus, setSavingStatus] = useState({});
 
-
-
     useEffect(() => {
         const fetchJobs = async () => {
             const { data, error } = await supabase
@@ -52,10 +50,12 @@ export default function JobTrackerApp() {
         fetchJobs();
     }, []);
 
-    const handleChange = (index, key, value) => {
-        const newJobs = [...jobs];
-        newJobs[index][key] = value;
-        setJobs(newJobs);
+    const handleChange = useCallback((index, key, value) => {
+        setJobs((prevJobs) => {
+            const newJobs = [...prevJobs];
+            newJobs[index][key] = value;
+            return newJobs;
+        });
 
         setSavingStatus((prev) => ({ ...prev, [index]: "Saving..." }));
 
@@ -66,8 +66,6 @@ export default function JobTrackerApp() {
         saveTimeouts.current[index] = setTimeout(async () => {
             await saveJobToDB(index);
             setSavingStatus((prev) => ({ ...prev, [index]: "Saved ✅" }));
-
-            // Clear message after 2 seconds
             setTimeout(() => {
                 setSavingStatus((prev) => {
                     const newStatus = { ...prev };
@@ -76,7 +74,7 @@ export default function JobTrackerApp() {
                 });
             }, 2000);
         }, 1500);
-    };
+    }, []);
 
 
     const addRow = async () => {
@@ -117,7 +115,6 @@ export default function JobTrackerApp() {
         };
 
         if (job.id) {
-            // Update existing row
             const { error } = await supabase
                 .from("jobs")
                 .update(sanitizedJob)
@@ -130,7 +127,6 @@ export default function JobTrackerApp() {
                 console.log("Job updated");
             }
         } else {
-            // Insert new row
             const { data, error } = await supabase
                 .from("jobs")
                 .insert([removeId(sanitizedJob)])
@@ -159,12 +155,10 @@ export default function JobTrackerApp() {
             const valB = b[key];
 
             if (key.toLowerCase().includes("date")) {
-                // Convert to timestamps for date sorting
                 const dateA = valA ? new Date(valA).getTime() : 0;
                 const dateB = valB ? new Date(valB).getTime() : 0;
                 return direction === "asc" ? dateA - dateB : dateB - dateA;
             } else {
-                // Fallback for text
                 return direction === "asc"
                     ? (valA || "").toString().localeCompare((valB || "").toString())
                     : (valB || "").toString().localeCompare((valA || "").toString());
@@ -211,12 +205,6 @@ export default function JobTrackerApp() {
     const percent = (count, total = totalApplications) =>
         total ? ((count / total) * 100).toFixed(1) : "0.0";
 
-    const appliedPct = percent(appliedCount);
-    const interviewingPct = percent(interviewingCount);
-    const rejectedPct = percent(rejectedCount);
-    const assessmentPct = percent(assessmentCount);
-    const screeningPct = percent(screeningCount);
-
     const toggleMonth = (month) => {
         setOpenMonths((prev) =>
             prev.includes(month)
@@ -225,47 +213,57 @@ export default function JobTrackerApp() {
         );
     };
 
-    const JobRow = memo(({ job, index, statusOptions, handleChange, savingStatus }) => {
-        return (
-            <tr key={job.id || index} className="border-t">
-                {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map((key) => (
-                    <td className="p-2" key={key}>
-                        {key === "status" ? (
-                            <select
-                                value={job[key]}
-                                onChange={(e) => handleChange(index, key, e.target.value)}
-                                className="w-full p-1 border border-gray-300 rounded"
-                            >
-                                <option value="">Select</option>
-                                {statusOptions.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
-                        ) : key.includes("Date") ? (
-                            <input
-                                type="date"
-                                value={job[key] || ""}
-                                onChange={(e) => handleChange(index, key, e.target.value)}
-                                className="w-full p-1 border border-gray-300 rounded"
-                            />
-                        ) : (
-                            <input
-                                type="text"
-                                value={job[key]}
-                                onChange={(e) => handleChange(index, key, e.target.value)}
-                                className="w-full p-1 border border-gray-300 rounded"
-                            />
+    const JobRow = memo(
+        ({ job, index, statusOptions, handleChange, savingStatus }) => {
+            return (
+                <tr key={job.id || index} className="border-t">
+                    {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map((key) => (
+                        <td className="p-2" key={key}>
+                            {key === "status" ? (
+                                <select
+                                    value={job[key]}
+                                    onChange={(e) => handleChange(index, key, e.target.value)}
+                                    className="w-full p-1 border border-gray-300 rounded"
+                                >
+                                    <option value="">Select</option>
+                                    {statusOptions.map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            ) : key.includes("Date") ? (
+                                <input
+                                    type="date"
+                                    value={job[key] || ""}
+                                    onChange={(e) => handleChange(index, key, e.target.value)}
+                                    className="w-full p-1 border border-gray-300 rounded"
+                                />
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={job[key]}
+                                    onChange={(e) => handleChange(index, key, e.target.value)}
+                                    className="w-full p-1 border border-gray-300 rounded"
+                                />
+                            )}
+                        </td>
+                    ))}
+                    <td className="p-2">
+                        {savingStatus[index] && (
+                            <div className="text-xs text-gray-500 mt-1">{savingStatus[index]}</div>
                         )}
                     </td>
-                ))}
-                <td className="p-2">
-                    {savingStatus[index] && (
-                        <div className="text-xs text-gray-500 mt-1">{savingStatus[index]}</div>
-                    )}
-                </td>
-            </tr>
-        );
-    });
+                </tr>
+            );
+        },
+        (prevProps, nextProps) => {
+            // Only re-render if job or saving status actually changed
+            return (
+                prevProps.job === nextProps.job &&
+                prevProps.savingStatus[prevProps.index] === nextProps.savingStatus[nextProps.index]
+            );
+        }
+    );
+
 
     return (
         <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-slate-200 p-6">
@@ -477,19 +475,16 @@ export default function JobTrackerApp() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {jobsInMonth.map((job) => {
-                                                const index = jobs.findIndex((j) => j.id === job.id);
-                                                return (
-                                                    <JobRow
-                                                        key={job.id || index}
-                                                        job={job}
-                                                        index={index}
-                                                        statusOptions={statusOptions}
-                                                        handleChange={handleChange}
-                                                        savingStatus={savingStatus}
-                                                    />
-                                                );
-                                            })}
+                                            {jobsInMonth.map((job, index) => (
+                                                <JobRow
+                                                    key={job.id || index}
+                                                    job={job}
+                                                    index={index}
+                                                    statusOptions={statusOptions}
+                                                    handleChange={handleChange}
+                                                    savingStatus={savingStatus}
+                                                />
+                                            ))}
                                         </tbody>
 
                                     </table>
