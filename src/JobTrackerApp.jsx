@@ -356,7 +356,12 @@ export default function JobTrackerApp() {
         return jobs.filter(job =>
             (job.company || "").toLowerCase().includes(lowerFilter) ||
             (job.position || "").toLowerCase().includes(lowerFilter) ||
-            (job.status || "").toLowerCase().includes(lowerFilter)
+            (job.location || "").toLowerCase().includes(lowerFilter) ||
+            (job.status || "").toLowerCase().includes(lowerFilter) ||
+            (job.jobSite || "").toLowerCase().includes(lowerFilter) ||
+            (job.url || "").toLowerCase().includes(lowerFilter) ||
+            (job.appliedDate || "").toLowerCase().includes(lowerFilter) ||
+            (job.rejectionDate || "").toLowerCase().includes(lowerFilter)
         );
     }, [jobs, filter]);
 
@@ -431,7 +436,7 @@ export default function JobTrackerApp() {
             <div className="max-w-6xl mx-auto mb-6">
                 <input
                     type="text"
-                    placeholder="🔍 Search jobs by company, position or status..."
+                    placeholder="🔍 Search jobs by any field (company, position, location, status, job site, URL, dates)..."
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
