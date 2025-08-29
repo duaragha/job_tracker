@@ -7,12 +7,9 @@ import {
   Heading,
   Input,
   Select,
-  Table,
   VStack,
   HStack,
-  Stat,
   SimpleGrid,
-  Collapsible,
   Badge,
   IconButton,
   Flex,
@@ -25,6 +22,9 @@ import {
   Center,
   Tooltip,
 } from "@chakra-ui/react";
+import { Table } from "@chakra-ui/react/table";
+import { Stat } from "@chakra-ui/react/stat";
+import { Collapsible } from "@chakra-ui/react/collapsible";
 import {
   Search,
   Plus,
