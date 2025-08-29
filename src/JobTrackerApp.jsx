@@ -108,6 +108,7 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
 };
 
 export default function JobTrackerApp() {
+  console.log('JobTrackerApp: Component rendering...');
   
   // Color values
   const bgGradient = "linear(to-tr, gray.50, gray.100)";
@@ -135,16 +136,20 @@ export default function JobTrackerApp() {
   const saveTimeouts = useRef({});
 
   useEffect(() => {
+    console.log('JobTrackerApp: useEffect running, fetching jobs...');
     const fetchJobs = async () => {
       setIsLoading(true);
       setError(null);
 
       // Check if Supabase client is properly initialized
       if (!supabase) {
+        console.error('Supabase client is null!');
         setError("Database connection not configured. Please set environment variables in Vercel.");
         setIsLoading(false);
         return;
       }
+
+      console.log('Supabase client exists, attempting to fetch jobs...');
 
       try {
         const { data, error } = await supabase
@@ -156,6 +161,7 @@ export default function JobTrackerApp() {
           console.error("Error fetching jobs:", error);
           setError(`Failed to load jobs: ${error.message}`);
         } else {
+          console.log(`Successfully fetched ${data?.length || 0} jobs`);
           setJobs(data || []);
         }
       } catch (err) {
