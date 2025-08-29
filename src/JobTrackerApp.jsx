@@ -131,21 +131,38 @@ export default function JobTrackerApp() {
   const [openMonths, setOpenMonths] = useState([]);
   const [savingStatus, setSavingStatus] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const saveTimeouts = useRef({});
 
   useEffect(() => {
     const fetchJobs = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .order("appliedDate", { ascending: false });
+      setError(null);
 
-      if (error) {
-        console.error("Error fetching jobs:", error);
-      } else {
-        setJobs(data || []);
+      // Check if Supabase client is properly initialized
+      if (!supabase) {
+        setError("Database connection not configured. Please set environment variables in Vercel.");
+        setIsLoading(false);
+        return;
       }
+
+      try {
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .order("appliedDate", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching jobs:", error);
+          setError(`Failed to load jobs: ${error.message}`);
+        } else {
+          setJobs(data || []);
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        setError("An unexpected error occurred while loading jobs");
+      }
+      
       setIsLoading(false);
     };
 
@@ -185,7 +202,10 @@ export default function JobTrackerApp() {
           rejectionDate: jobToSave.rejectionDate === "" ? null : jobToSave.rejectionDate,
         };
 
-        if (jobId) {
+        if (!supabase) {
+          console.error("Cannot save: Supabase not initialized");
+          setSavingStatus(prev => ({ ...prev, [jobIndex]: "No DB connection!" }));
+        } else if (jobId) {
           const { error } = await supabase
             .from("jobs")
             .update(sanitizedJob)
@@ -231,6 +251,11 @@ export default function JobTrackerApp() {
   };
 
   const addRow = async () => {
+    if (!supabase) {
+      console.error("Cannot add row: Supabase not initialized");
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const newJob = {
       company: "",
@@ -323,6 +348,43 @@ export default function JobTrackerApp() {
           <VStack spacing={4}>
             <Spinner size="xl" color="brand.500" thickness="4px" />
             <Text fontSize="xl" color={headingColor}>Loading jobs...</Text>
+          </VStack>
+        </Center>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box minH="100vh" bgGradient={bgGradient} p={6}>
+        <Center h="100vh">
+          <VStack spacing={4}>
+            <Card maxW="md" bg={cardBg} borderColor="red.300" borderWidth="2px">
+              <CardHeader>
+                <Heading size="lg" color="red.600">⚠️ Connection Error</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={4} align="start">
+                  <Text color={headingColor}>{error}</Text>
+                  <Text fontSize="sm" color="gray.600">
+                    To fix this issue in Vercel:
+                  </Text>
+                  <Box as="ol" pl={5} fontSize="sm" color="gray.600">
+                    <li>Go to your Vercel project dashboard</li>
+                    <li>Navigate to Settings → Environment Variables</li>
+                    <li>Add the following variables:</li>
+                    <Box as="ul" pl={5} mt={2}>
+                      <li><code>VITE_SUPABASE_URL</code></li>
+                      <li><code>VITE_SUPABASE_ANON_KEY</code></li>
+                    </Box>
+                    <li>Redeploy your application</li>
+                  </Box>
+                  <Text fontSize="xs" color="gray.500" mt={4}>
+                    Check the browser console for more details.
+                  </Text>
+                </VStack>
+              </CardBody>
+            </Card>
           </VStack>
         </Center>
       </Box>
