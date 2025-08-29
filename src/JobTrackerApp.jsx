@@ -21,10 +21,10 @@ import {
   Spinner,
   Center,
   Tooltip,
+  Table,
+  Stat,
+  Collapsible,
 } from "@chakra-ui/react";
-import { Table } from "@chakra-ui/react/table";
-import { Stat } from "@chakra-ui/react/stat";
-import { Collapsible } from "@chakra-ui/react/collapsible";
 import {
   Search,
   Plus,
@@ -108,7 +108,7 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
 };
 
 export default function JobTrackerApp() {
-  console.log('JobTrackerApp: Component rendering...');
+  console.log('JobTrackerApp: Component rendering v2...');
   
   // Color values
   const bgGradient = "linear(to-tr, gray.50, gray.100)";
@@ -496,7 +496,7 @@ export default function JobTrackerApp() {
               <CardBody p={0}>
                 <Box overflowX="auto">
                   <Table.Root variant="simple" size="sm">
-                    <Table.Header bg={headerBg}>
+                    <Table.Header>
                       <Table.Row>
                         {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
                           <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
@@ -528,7 +528,7 @@ export default function JobTrackerApp() {
               <CardBody p={0}>
                 <Box overflowX="auto">
                   <Table.Root variant="simple" size="sm">
-                    <Table.Header bg={headerBg}>
+                    <Table.Header>
                       <Table.Row>
                         {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
                           <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
@@ -595,7 +595,7 @@ export default function JobTrackerApp() {
                       <CardBody p={0}>
                         <Box overflowX="auto">
                           <Table.Root variant="simple" size="sm">
-                            <Table.Header bg={headerBg}>
+                            <Table.Header>
                               <Table.Row>
                                 {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
                                   <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
