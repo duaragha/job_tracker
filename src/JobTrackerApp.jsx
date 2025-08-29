@@ -8,34 +8,21 @@ import {
   Input,
   Select,
   Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
   VStack,
   HStack,
   Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
   SimpleGrid,
-  Collapse,
+  Collapsible,
   Badge,
   IconButton,
-  useColorMode,
-  useColorModeValue,
   Flex,
   Text,
   InputGroup,
-  InputLeftElement,
   Card,
   CardHeader,
   CardBody,
   Spinner,
   Center,
-  useToast,
   Tooltip,
 } from "@chakra-ui/react";
 import {
@@ -43,14 +30,12 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  Moon,
-  Sun,
 } from "lucide-react";
 
 // JobRow component defined outside to prevent recreation on every render
 const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, statusOptions }) => {
-  const inputBg = useColorModeValue("white", "gray.700");
-  const borderColor = useColorModeValue("gray.300", "gray.600");
+  const inputBg = "white";
+  const borderColor = "gray.300";
   
   const getStatusColor = (status) => {
     const statusColors = {
@@ -64,9 +49,9 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
   };
 
   return (
-    <Tr>
+    <Table.Row>
       {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
-        <Td key={key}>
+        <Table.Cell key={key}>
           {key === "status" ? (
             <Select
               value={job[key] || ""}
@@ -109,34 +94,29 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
               </datalist>
             </>
           )}
-        </Td>
+        </Table.Cell>
       ))}
-      <Td>
+      <Table.Cell>
         {savingStatus && (
           <Badge colorScheme={savingStatus.includes("Error") ? "red" : savingStatus.includes("✅") ? "green" : "yellow"} fontSize="xs">
             {savingStatus}
           </Badge>
         )}
-      </Td>
-    </Tr>
+      </Table.Cell>
+    </Table.Row>
   );
 };
 
 export default function JobTrackerApp() {
-  const { colorMode, toggleColorMode } = useColorMode();
-  const toast = useToast();
   
-  // Color mode values
-  const bgGradient = useColorModeValue(
-    "linear(to-tr, gray.50, gray.100)",
-    "linear(to-tr, gray.900, gray.800)"
-  );
-  const cardBg = useColorModeValue("white", "gray.800");
-  const headerBg = useColorModeValue("gray.100", "gray.700");
-  const headingColor = useColorModeValue("gray.800", "white");
-  const statBg = useColorModeValue("white", "gray.700");
-  const inputBg = useColorModeValue("white", "gray.700");
-  const borderColor = useColorModeValue("gray.200", "gray.600");
+  // Color values
+  const bgGradient = "linear(to-tr, gray.50, gray.100)";
+  const cardBg = "white";
+  const headerBg = "gray.100";
+  const headingColor = "gray.800";
+  const statBg = "white";
+  const inputBg = "white";
+  const borderColor = "gray.200";
   
   const statusOptions = [
     "Applied",
@@ -163,13 +143,6 @@ export default function JobTrackerApp() {
 
       if (error) {
         console.error("Error fetching jobs:", error);
-        toast({
-          title: "Error fetching jobs",
-          description: error.message,
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
       } else {
         setJobs(data || []);
       }
@@ -177,7 +150,7 @@ export default function JobTrackerApp() {
     };
 
     fetchJobs();
-  }, [toast]);
+  }, []);
 
   const updateJobField = (jobId, jobIndex, key, value) => {
     // If rejection date is set, automatically change status to "Rejected"
@@ -221,13 +194,6 @@ export default function JobTrackerApp() {
           if (error) {
             console.error("Error updating job:", error.message);
             setSavingStatus(prev => ({ ...prev, [jobIndex]: "Error!" }));
-            toast({
-              title: "Error updating job",
-              description: error.message,
-              status: "error",
-              duration: 3000,
-              isClosable: true,
-            });
           } else {
             setSavingStatus(prev => ({ ...prev, [jobIndex]: "Saved ✅" }));
           }
@@ -241,13 +207,6 @@ export default function JobTrackerApp() {
           if (error || !data) {
             console.error("Error inserting job:", error?.message || "No data returned");
             setSavingStatus(prev => ({ ...prev, [jobIndex]: "Error!" }));
-            toast({
-              title: "Error inserting job",
-              description: error?.message || "No data returned",
-              status: "error",
-              duration: 3000,
-              isClosable: true,
-            });
           } else {
             // Update the job with the new ID from database
             setJobs(prevJobs => prevJobs.map((j, i) =>
@@ -289,22 +248,8 @@ export default function JobTrackerApp() {
 
     if (error || !data) {
       console.error("Error inserting job:", error?.message || "No data returned");
-      toast({
-        title: "Error adding job",
-        description: error?.message || "No data returned",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
     } else {
       setJobs(prev => [data[0], ...prev]);
-      toast({
-        title: "Job added",
-        description: "New job entry created successfully",
-        status: "success",
-        duration: 2000,
-        isClosable: true,
-      });
     }
   };
 
@@ -393,23 +338,10 @@ export default function JobTrackerApp() {
             <Heading size="2xl" color={headingColor}>
               📋 Job Application Tracker
             </Heading>
-            <Tooltip label={`Switch to ${colorMode === 'light' ? 'dark' : 'light'} mode`}>
-              <IconButton
-                aria-label="Toggle color mode"
-                icon={colorMode === "light" ? <Moon /> : <Sun />}
-                onClick={toggleColorMode}
-                colorScheme="brand"
-                variant="ghost"
-                size="lg"
-              />
-            </Tooltip>
           </Flex>
 
           {/* Search Bar */}
-          <InputGroup size="lg">
-            <InputLeftElement pointerEvents="none">
-              <Search color="gray" size={20} />
-            </InputLeftElement>
+          <InputGroup size="lg" startElement={<Search color="gray" size={20} />}>
             <Input
               placeholder="Search jobs by any field (company, position, location, status, job site, URL, dates)..."
               value={filter}
@@ -421,7 +353,7 @@ export default function JobTrackerApp() {
               }}
               bg={inputBg}
               borderColor={borderColor}
-              _placeholder={{ color: useColorModeValue("gray.500", "gray.400") }}
+              _placeholder={{ color: "gray.500" }}
             />
           </InputGroup>
 
@@ -430,46 +362,46 @@ export default function JobTrackerApp() {
             <Card w="full" bg={cardBg} borderColor={borderColor} variant="outline">
               <CardBody>
                 <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4}>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">📌 Applied</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Applied}</StatNumber>
-                    <StatHelpText fontSize="xs">
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">📌 Applied</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Applied}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">
                       {stats.Total > 0 ? ((stats.Applied / stats.Total) * 100).toFixed(1) : 0}%
-                    </StatHelpText>
-                  </Stat>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">📞 Interviewing</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Interviewing}</StatNumber>
-                    <StatHelpText fontSize="xs">
+                    </Stat.HelpText>
+                  </Stat.Root>
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">📞 Interviewing</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Interviewing}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">
                       {stats.Total > 0 ? ((stats.Interviewing / stats.Total) * 100).toFixed(1) : 0}%
-                    </StatHelpText>
-                  </Stat>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">❌ Rejected</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Rejected}</StatNumber>
-                    <StatHelpText fontSize="xs">
+                    </Stat.HelpText>
+                  </Stat.Root>
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">❌ Rejected</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Rejected}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">
                       {stats.Total > 0 ? ((stats.Rejected / stats.Total) * 100).toFixed(1) : 0}%
-                    </StatHelpText>
-                  </Stat>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">🧪 Assessment</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Assessment}</StatNumber>
-                    <StatHelpText fontSize="xs">
+                    </Stat.HelpText>
+                  </Stat.Root>
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">🧪 Assessment</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Assessment}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">
                       {stats.Total > 0 ? ((stats.Assessment / stats.Total) * 100).toFixed(1) : 0}%
-                    </StatHelpText>
-                  </Stat>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">🔍 Screening</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Screening}</StatNumber>
-                    <StatHelpText fontSize="xs">
+                    </Stat.HelpText>
+                  </Stat.Root>
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">🔍 Screening</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Screening}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">
                       {stats.Total > 0 ? ((stats.Screening / stats.Total) * 100).toFixed(1) : 0}%
-                    </StatHelpText>
-                  </Stat>
-                  <Stat bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
-                    <StatLabel fontSize="sm">🗂️ Total</StatLabel>
-                    <StatNumber fontSize="lg">{stats.Total}</StatNumber>
-                    <StatHelpText fontSize="xs">All jobs</StatHelpText>
-                  </Stat>
+                    </Stat.HelpText>
+                  </Stat.Root>
+                  <Stat.Root bg={statBg} p={3} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+                    <Stat.Label fontSize="sm">🗂️ Total</Stat.Label>
+                    <Stat.ValueText fontSize="lg">{stats.Total}</Stat.ValueText>
+                    <Stat.HelpText fontSize="xs">All jobs</Stat.HelpText>
+                  </Stat.Root>
                 </SimpleGrid>
               </CardBody>
             </Card>
@@ -494,16 +426,16 @@ export default function JobTrackerApp() {
                 <Heading size="md">📌 Unsaved Jobs (No Applied Date)</Heading>
               </CardHeader>
               <CardBody p={0}>
-                <TableContainer>
-                  <Table variant="simple" size="sm">
-                    <Thead bg={headerBg}>
-                      <Tr>
+                <Box overflowX="auto">
+                  <Table.Root variant="simple" size="sm">
+                    <Table.Header bg={headerBg}>
+                      <Table.Row>
                         {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
-                          <Th key={header}>{header}</Th>
+                          <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
                         ))}
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
                       {unsavedJobs.map((job, index) => (
                         <JobRow 
                           key={job.id || `unsaved-${index}`} 
@@ -515,9 +447,9 @@ export default function JobTrackerApp() {
                           statusOptions={statusOptions}
                         />
                       ))}
-                    </Tbody>
-                  </Table>
-                </TableContainer>
+                    </Table.Body>
+                  </Table.Root>
+                </Box>
               </CardBody>
             </Card>
           )}
@@ -526,16 +458,16 @@ export default function JobTrackerApp() {
           {filter.trim() ? (
             <Card w="full" bg={cardBg} borderColor={borderColor} variant="outline">
               <CardBody p={0}>
-                <TableContainer>
-                  <Table variant="simple" size="sm">
-                    <Thead bg={headerBg}>
-                      <Tr>
+                <Box overflowX="auto">
+                  <Table.Root variant="simple" size="sm">
+                    <Table.Header bg={headerBg}>
+                      <Table.Row>
                         {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
-                          <Th key={header}>{header}</Th>
+                          <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
                         ))}
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
                       {filteredJobs.map((job) => {
                         const jobIndex = jobs.indexOf(job);
                         return (
@@ -550,9 +482,9 @@ export default function JobTrackerApp() {
                           />
                         );
                       })}
-                    </Tbody>
-                  </Table>
-                </TableContainer>
+                    </Table.Body>
+                  </Table.Root>
+                </Box>
               </CardBody>
             </Card>
           ) : (
@@ -574,7 +506,7 @@ export default function JobTrackerApp() {
                     bg={headerBg}
                     cursor="pointer"
                     onClick={() => toggleMonth(month)}
-                    _hover={{ bg: useColorModeValue("gray.200", "gray.600") }}
+                    _hover={{ bg: "gray.200" }}
                   >
                     <Flex justify="space-between" align="center" wrap="wrap">
                       <HStack>
@@ -590,37 +522,39 @@ export default function JobTrackerApp() {
                       </HStack>
                     </Flex>
                   </CardHeader>
-                  <Collapse in={isOpen} animateOpacity>
-                    <CardBody p={0}>
-                      <TableContainer>
-                        <Table variant="simple" size="sm">
-                          <Thead bg={headerBg}>
-                            <Tr>
-                              {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
-                                <Th key={header}>{header}</Th>
-                              ))}
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {monthJobs.map((job) => {
-                              const jobIndex = jobs.indexOf(job);
-                              return (
-                                <JobRow 
-                                  key={job.id || `month-${jobIndex}`}
-                                  job={job} 
-                                  jobIndex={jobIndex}
-                                  updateJobField={updateJobField}
-                                  savingStatus={savingStatus[jobIndex]}
-                                  suggestions={suggestions}
-                                  statusOptions={statusOptions}
-                                />
-                              );
-                            })}
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    </CardBody>
-                  </Collapse>
+                  <Collapsible.Root open={isOpen}>
+                    <Collapsible.Content>
+                      <CardBody p={0}>
+                        <Box overflowX="auto">
+                          <Table.Root variant="simple" size="sm">
+                            <Table.Header bg={headerBg}>
+                              <Table.Row>
+                                {["Company", "Position", "Location", "Status", "Applied Date", "Rejection Date", "Job Site", "URL", ""].map(header => (
+                                  <Table.ColumnHeader key={header}>{header}</Table.ColumnHeader>
+                                ))}
+                              </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                              {monthJobs.map((job) => {
+                                const jobIndex = jobs.indexOf(job);
+                                return (
+                                  <JobRow 
+                                    key={job.id || `month-${jobIndex}`}
+                                    job={job} 
+                                    jobIndex={jobIndex}
+                                    updateJobField={updateJobField}
+                                    savingStatus={savingStatus[jobIndex]}
+                                    suggestions={suggestions}
+                                    statusOptions={statusOptions}
+                                  />
+                                );
+                              })}
+                            </Table.Body>
+                          </Table.Root>
+                        </Box>
+                      </CardBody>
+                    </Collapsible.Content>
+                  </Collapsible.Root>
                 </Card>
               );
             })
