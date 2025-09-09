@@ -1,7 +1,7 @@
-import JobTrackerApp from "./JobTrackerApp";
+import JobTrackerOptimized from "./JobTrackerOptimized";
 
 function App() {
-  return <JobTrackerApp />;
+  return <JobTrackerOptimized />;
 }
 
 export default App;
