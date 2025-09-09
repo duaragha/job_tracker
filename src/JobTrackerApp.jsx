@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
+import "./JobTrackerModern.css";
 
 // JobRow component defined outside to prevent recreation on every render
 const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, statusOptions }) => (
-    <tr className="border-t">
+    <tr>
         {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
-            <td className="p-2" key={key}>
+            <td key={key}>
                 {key === "status" ? (
                     <select
                         value={job[key] || ""}
                         onChange={(e) => updateJobField(job.id, jobIndex, key, e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded"
+                        className="form-select status-select"
                     >
                         <option value="">Select</option>
                         {statusOptions.map(s => (
@@ -22,7 +23,7 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
                         type="date"
                         value={job[key] || ""}
                         onChange={(e) => updateJobField(job.id, jobIndex, key, e.target.value)}
-                        className="w-full p-1 border border-gray-300 rounded"
+                        className="form-input"
                     />
                 ) : (
                     <>
@@ -31,7 +32,7 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
                             type="text"
                             value={job[key] || ""}
                             onChange={(e) => updateJobField(job.id, jobIndex, key, e.target.value)}
-                            className="w-full p-1 border border-gray-300 rounded"
+                            className="form-input"
                             placeholder={`Enter ${key}`}
                             autoComplete="off"
                         />
@@ -44,9 +45,11 @@ const JobRow = ({ job, jobIndex, updateJobField, savingStatus, suggestions, stat
                 )}
             </td>
         ))}
-        <td className="p-2">
+        <td>
             {savingStatus && (
-                <div className="text-xs text-gray-500 mt-1">{savingStatus}</div>
+                <span className={`save-status ${savingStatus.toLowerCase().includes('sav') ? 'saving' : savingStatus.toLowerCase().includes('error') ? 'error' : 'saved'}`}>
+                    {savingStatus}
+                </span>
             )}
         </td>
     </tr>
@@ -63,10 +66,24 @@ export default function JobTrackerApp() {
 
     const [jobs, setJobs] = useState([]);
     const [filter, setFilter] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [openMonths, setOpenMonths] = useState([]);
     const [savingStatus, setSavingStatus] = useState({});
     const [isLoading, setIsLoading] = useState(true);
+    const [darkMode, setDarkMode] = useState(() => {
+        return localStorage.getItem('darkMode') === 'true';
+    });
     const saveTimeouts = useRef({});
+    const searchTimeout = useRef(null);
+
+    useEffect(() => {
+        if (darkMode) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        localStorage.setItem('darkMode', darkMode);
+    }, [darkMode]);
 
     useEffect(() => {
         const fetchJobs = async () => {
@@ -171,7 +188,7 @@ export default function JobTrackerApp() {
             company: "",
             position: "",
             location: "",
-            status: "",
+            status: "Applied", // Set default status to "Applied"
             appliedDate: today,
             rejectionDate: null,
             jobSite: "",
@@ -253,67 +270,126 @@ export default function JobTrackerApp() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-slate-200 p-6 flex items-center justify-center">
-                <div className="text-xl text-gray-600">Loading jobs...</div>
+            <div className="job-tracker-container">
+                <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <div className="loading-text">Loading your job applications...</div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-tr from-slate-100 to-slate-200 p-6">
-            <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">📋 Job Application Tracker</h1>
+        <div className="job-tracker-container">
+            <header className="tracker-header">
+                <div className="header-content">
+                    <div>
+                        <h1 className="tracker-title">Job Application Tracker</h1>
+                        <p className="tracker-subtitle">Track, manage, and succeed in your job search</p>
+                    </div>
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className="dark-mode-toggle"
+                        aria-label="Toggle dark mode"
+                    >
+                        {darkMode ? '☀️' : '🌙'}
+                    </button>
+                </div>
+            </header>
 
-            <div className="max-w-6xl mx-auto mb-6">
+            <div className="search-container">
                 <input
                     type="text"
-                    placeholder="🔍 Search jobs by any field (company, position, location, status, job site, URL, dates)..."
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Search jobs by any field..."
+                    value={searchInput}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchInput(value);
+                        
+                        // Clear existing timeout
+                        if (searchTimeout.current) {
+                            clearTimeout(searchTimeout.current);
+                        }
+                        
+                        // Set new timeout for debounced search
+                        searchTimeout.current = setTimeout(() => {
+                            setFilter(value);
+                        }, 200); // 200ms debounce delay
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === 'Escape') {
+                            setSearchInput('');
                             setFilter('');
                         }
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="search-input"
                 />
             </div>
 
             {!filter.trim() && (
-                <div className="max-w-6xl mx-auto mb-6 text-sm text-gray-700 flex flex-wrap gap-4 bg-white shadow-sm rounded-lg p-4">
-                    <span>📌 Applied: {stats.Applied} ({stats.Total > 0 ? ((stats.Applied / stats.Total) * 100).toFixed(1) : 0}%)</span>
-                    <span>📞 Interviewing: {stats.Interviewing} ({stats.Total > 0 ? ((stats.Interviewing / stats.Total) * 100).toFixed(1) : 0}%)</span>
-                    <span>❌ Rejected: {stats.Rejected} ({stats.Total > 0 ? ((stats.Rejected / stats.Total) * 100).toFixed(1) : 0}%)</span>
-                    <span>🧪 Assessment: {stats.Assessment} ({stats.Total > 0 ? ((stats.Assessment / stats.Total) * 100).toFixed(1) : 0}%)</span>
-                    <span>🔍 Screening: {stats.Screening} ({stats.Total > 0 ? ((stats.Screening / stats.Total) * 100).toFixed(1) : 0}%)</span>
-                    <span>🗂️ Total: {stats.Total}</span>
+                <div className="stats-container">
+                    <div className="stat-card stat-applied">
+                        <div className="stat-label">Applied</div>
+                        <div className="stat-value">{stats.Applied}</div>
+                        <div className="stat-percentage">{stats.Total > 0 ? ((stats.Applied / stats.Total) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                    <div className="stat-card stat-interviewing">
+                        <div className="stat-label">Interviewing</div>
+                        <div className="stat-value">{stats.Interviewing}</div>
+                        <div className="stat-percentage">{stats.Total > 0 ? ((stats.Interviewing / stats.Total) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                    <div className="stat-card stat-rejected">
+                        <div className="stat-label">Rejected</div>
+                        <div className="stat-value">{stats.Rejected}</div>
+                        <div className="stat-percentage">{stats.Total > 0 ? ((stats.Rejected / stats.Total) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                    <div className="stat-card stat-assessment">
+                        <div className="stat-label">Assessment</div>
+                        <div className="stat-value">{stats.Assessment}</div>
+                        <div className="stat-percentage">{stats.Total > 0 ? ((stats.Assessment / stats.Total) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                    <div className="stat-card stat-screening">
+                        <div className="stat-label">Screening</div>
+                        <div className="stat-value">{stats.Screening}</div>
+                        <div className="stat-percentage">{stats.Total > 0 ? ((stats.Screening / stats.Total) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                    <div className="stat-card stat-total">
+                        <div className="stat-label">Total Jobs</div>
+                        <div className="stat-value">{stats.Total}</div>
+                        <div className="stat-percentage">All applications</div>
+                    </div>
                 </div>
             )}
 
             {!filter.trim() && (
-                <div className="max-w-6xl mx-auto mb-8">
+                <div style={{ maxWidth: '1400px', margin: '0 auto 2rem', padding: '0 1rem' }}>
                     <button
                         onClick={addRow}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700 transition"
+                        className="action-button"
                     >
-                        ➕ Add Row
+                        <span>+</span> Add New Application
                     </button>
                 </div>
             )}
 
             {!filter.trim() && unsavedJobs.length > 0 && (
-                <div className="max-w-6xl mx-auto mb-10 bg-white shadow-lg rounded-xl overflow-hidden">
-                    <div className="bg-yellow-100 p-4 border-b text-gray-800 font-semibold">
-                        📌 Unsaved Jobs (No Applied Date)
+                <div className="month-section">
+                    <div className="month-header" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderBottom: '2px solid #fbbf24' }}>
+                        <h2 className="month-title">Pending Applications</h2>
+                        <div className="month-stats">
+                            <span className="month-stat">Missing Applied Date</span>
+                        </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full table-auto text-sm">
-                            <thead className="bg-slate-50 text-gray-700">
+                    <div className="table-container">
+                        <table className="jobs-table">
+                            <thead>
                                 <tr>
                                     {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
-                                        <th key={key} className="p-3 text-left">
+                                        <th key={key}>
                                             {key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
                                         </th>
                                     ))}
+                                    <th style={{minWidth: "100px"}}>Save Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -335,34 +411,37 @@ export default function JobTrackerApp() {
             )}
 
             {filter.trim() ? (
-                <div className="max-w-6xl mx-auto mb-10 bg-white shadow-lg rounded-xl overflow-hidden">
-                    <table className="w-full table-auto text-sm">
-                        <thead className="bg-slate-50 text-gray-700">
-                            <tr>
-                                {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
-                                    <th key={key} className="p-3 text-left">
-                                        {key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredJobs.map((job) => {
-                                const jobIndex = jobs.indexOf(job);
-                                return (
-                                    <JobRow 
-                                        key={job.id || `filtered-${jobIndex}`}
-                                        job={job} 
-                                        jobIndex={jobIndex}
-                                        updateJobField={updateJobField}
-                                        savingStatus={savingStatus[jobIndex]}
-                                        suggestions={suggestions}
-                                        statusOptions={statusOptions}
-                                    />
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                <div className="month-section">
+                    <div className="table-container">
+                        <table className="jobs-table">
+                            <thead>
+                                <tr>
+                                    {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
+                                        <th key={key}>
+                                            {key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                                        </th>
+                                    ))}
+                                    <th style={{minWidth: "100px"}}>Save Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredJobs.map((job) => {
+                                    const jobIndex = jobs.indexOf(job);
+                                    return (
+                                        <JobRow 
+                                            key={job.id || `filtered-${jobIndex}`}
+                                            job={job} 
+                                            jobIndex={jobIndex}
+                                            updateJobField={updateJobField}
+                                            savingStatus={savingStatus[jobIndex]}
+                                            suggestions={suggestions}
+                                            statusOptions={statusOptions}
+                                        />
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             ) : (
                 Object.keys(jobsByMonth).map(month => {
@@ -377,33 +456,34 @@ export default function JobTrackerApp() {
                     };
 
                     return (
-                        <div key={month} className="max-w-6xl mx-auto mb-10 bg-white shadow-lg rounded-xl overflow-hidden">
+                        <div key={month} className="month-section">
                             <div
-                                className="bg-slate-100 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b cursor-pointer"
+                                className="month-header"
                                 onClick={() => toggleMonth(month)}
                             >
-                                <h2 className="text-xl font-semibold text-gray-800">
-                                    {month} {isOpen ? "▲" : "▼"}
+                                <h2 className="month-title">
+                                    {month} <span className={`month-toggle ${isOpen ? 'open' : ''}`}>▼</span>
                                 </h2>
-                                <div className="mt-2 sm:mt-0 text-sm text-gray-600 flex flex-wrap gap-3">
-                                    <span>📌 Applied: {monthStats.Applied}</span>
-                                    <span>📞 Interviewing: {monthStats.Interviewing}</span>
-                                    <span>❌ Rejected: {monthStats.Rejected}</span>
-                                    <span>🧪 Assessment: {monthStats.Assessment}</span>
-                                    <span>🔍 Screening: {monthStats.Screening}</span>
+                                <div className="month-stats">
+                                    <span className="month-stat">Applied: {monthStats.Applied}</span>
+                                    <span className="month-stat">Interviewing: {monthStats.Interviewing}</span>
+                                    <span className="month-stat">Rejected: {monthStats.Rejected}</span>
+                                    <span className="month-stat">Assessment: {monthStats.Assessment}</span>
+                                    <span className="month-stat">Screening: {monthStats.Screening}</span>
                                 </div>
                             </div>
 
                             {isOpen && (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full table-auto text-sm">
-                                        <thead className="bg-slate-50 text-gray-700">
+                                <div className="table-container">
+                                    <table className="jobs-table">
+                                        <thead>
                                             <tr>
-                                                {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url", "save"].map(key => (
-                                                    <th key={key} className="p-3 text-left">
-                                                        {key === "save" ? "" : key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                                                {["company", "position", "location", "status", "appliedDate", "rejectionDate", "jobSite", "url"].map(key => (
+                                                    <th key={key}>
+                                                        {key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
                                                     </th>
                                                 ))}
+                                                <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
