@@ -79,7 +79,7 @@ const AutocompleteInput = React.memo(({ value, onChange, suggestions = [], place
         onFocus={() => setShowSuggestions(true)}
         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
         placeholder={placeholder}
-        size="sm"
+        size="md"
         {...props}
       />
       {showSuggestions && filteredSuggestions.length > 0 && (
@@ -124,7 +124,7 @@ const AutocompleteInput = React.memo(({ value, onChange, suggestions = [], place
 });
 
 // Memoized JobRow component
-const JobRow = React.memo(({ job, jobIndex, updateJobField, savingStatus, suggestions, statusOptions }) => {
+const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusOptions }) => {
   const bgHover = useColorModeValue("gray.50", "gray.700");
   
   const handleFieldChange = useCallback((field, value) => {
@@ -164,7 +164,7 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, savingStatus, sugges
         <Select
           value={job.status || ""}
           onChange={(e) => handleFieldChange("status", e.target.value)}
-          size="sm"
+          size="md"
         >
           <option value="">Select</option>
           {statusOptions.map(s => (
@@ -177,7 +177,7 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, savingStatus, sugges
           type="date"
           value={job.appliedDate || ""}
           onChange={(e) => handleFieldChange("appliedDate", e.target.value)}
-          size="sm"
+          size="md"
         />
       </Td>
       <Td>
@@ -185,7 +185,7 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, savingStatus, sugges
           type="date"
           value={job.rejectionDate || ""}
           onChange={(e) => handleFieldChange("rejectionDate", e.target.value)}
-          size="sm"
+          size="md"
         />
       </Td>
       <Td>
@@ -206,29 +206,16 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, savingStatus, sugges
           field="url"
         />
       </Td>
-      <Td>
-        {savingStatus && (
-          <Badge
-            colorScheme={
-              savingStatus.toLowerCase().includes('sav') ? 'gray' :
-              savingStatus.toLowerCase().includes('error') ? 'red' : 'green'
-            }
-          >
-            {savingStatus}
-          </Badge>
-        )}
-      </Td>
     </Tr>
   );
 }, (prevProps, nextProps) => {
   return prevProps.job === nextProps.job && 
-         prevProps.savingStatus === nextProps.savingStatus &&
          prevProps.suggestions === nextProps.suggestions;
 });
 
 // Virtual scrolling row renderer
 const VirtualRow = ({ index, style, data }) => {
-  const { jobs, updateJobField, savingStatus, suggestions, statusOptions, bgHover, borderColor } = data;
+  const { jobs, updateJobField, suggestions, statusOptions, bgHover, borderColor } = data;
   const job = jobs[index];
   
   const handleFieldChange = useCallback((field, value) => {
@@ -237,7 +224,7 @@ const VirtualRow = ({ index, style, data }) => {
 
   return (
     <Box style={style} display="flex" alignItems="center" px={4} borderBottom="1px solid" borderColor={borderColor} _hover={{ bg: bgHover }}>
-      <Box flex="1" minW="150px" maxW="150px" pr={2}>
+      <Box flex="1" minW="200px" maxW="250px" pr={2}>
         <AutocompleteInput
           value={job.company || ""}
           onChange={(e) => handleFieldChange("company", e.target.value)}
@@ -246,7 +233,7 @@ const VirtualRow = ({ index, style, data }) => {
           field="company"
         />
       </Box>
-      <Box flex="1" minW="200px" maxW="200px" pr={2}>
+      <Box flex="1" minW="250px" maxW="350px" pr={2}>
         <AutocompleteInput
           value={job.position || ""}
           onChange={(e) => handleFieldChange("position", e.target.value)}
@@ -255,7 +242,7 @@ const VirtualRow = ({ index, style, data }) => {
           field="position"
         />
       </Box>
-      <Box flex="1" minW="150px" maxW="150px" pr={2}>
+      <Box flex="1" minW="200px" maxW="250px" pr={2}>
         <AutocompleteInput
           value={job.location || ""}
           onChange={(e) => handleFieldChange("location", e.target.value)}
@@ -264,11 +251,11 @@ const VirtualRow = ({ index, style, data }) => {
           field="location"
         />
       </Box>
-      <Box minW="120px" maxW="120px" pr={2}>
+      <Box minW="150px" maxW="180px" pr={2}>
         <Select
           value={job.status || ""}
           onChange={(e) => handleFieldChange("status", e.target.value)}
-          size="sm"
+          size="md"
         >
           <option value="">Select</option>
           {statusOptions.map(s => (
@@ -276,34 +263,21 @@ const VirtualRow = ({ index, style, data }) => {
           ))}
         </Select>
       </Box>
-      <Box minW="120px" maxW="120px" pr={2}>
+      <Box minW="150px" maxW="180px" pr={2}>
         <Input
           type="date"
           value={job.appliedDate || ""}
           onChange={(e) => handleFieldChange("appliedDate", e.target.value)}
-          size="sm"
+          size="md"
         />
       </Box>
-      <Box minW="120px" maxW="120px" pr={2}>
+      <Box minW="150px" maxW="180px" pr={2}>
         <Input
           type="date"
           value={job.rejectionDate || ""}
           onChange={(e) => handleFieldChange("rejectionDate", e.target.value)}
-          size="sm"
+          size="md"
         />
-      </Box>
-      <Box minW="80px" maxW="80px">
-        {savingStatus[index] && (
-          <Badge
-            colorScheme={
-              savingStatus[index].toLowerCase().includes('sav') ? 'gray' :
-              savingStatus[index].toLowerCase().includes('error') ? 'red' : 'green'
-            }
-            fontSize="xs"
-          >
-            {savingStatus[index]}
-          </Badge>
-        )}
       </Box>
     </Box>
   );
@@ -376,6 +350,7 @@ export default function JobTrackerOptimized() {
   const [searchInput, setSearchInput] = useState("");
   const [openMonths, setOpenMonths] = useState([]);
   const [savingStatus, setSavingStatus] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showVirtualized, setShowVirtualized] = useState(false);
   const { colorMode, toggleColorMode } = useColorMode();
@@ -434,7 +409,7 @@ export default function JobTrackerOptimized() {
       }
 
       // Show saving status
-      setSavingStatus(prev => ({ ...prev, [jobIndex]: "Saving..." }));
+      setIsSaving(true);
 
       // Debounce save to database
       saveTimeouts.current[jobIndex] = setTimeout(async () => {
@@ -454,9 +429,9 @@ export default function JobTrackerOptimized() {
 
           if (error) {
             console.error("Error updating job:", error.message);
-            setSavingStatus(prev => ({ ...prev, [jobIndex]: "Error!" }));
+            setIsSaving(false);
           } else {
-            setSavingStatus(prev => ({ ...prev, [jobIndex]: "Saved ✅" }));
+            setIsSaving(false);
           }
         } else {
           const { id: _, ...jobWithoutId } = sanitizedJob;
@@ -467,7 +442,7 @@ export default function JobTrackerOptimized() {
 
           if (error || !data) {
             console.error("Error inserting job:", error?.message || "No data returned");
-            setSavingStatus(prev => ({ ...prev, [jobIndex]: "Error!" }));
+            setIsSaving(false);
           } else {
             // Update the job with the new ID from database
             setJobs(prevJobs => {
@@ -476,18 +451,14 @@ export default function JobTrackerOptimized() {
               searchIndex.current.buildIndex(newJobs);
               return newJobs;
             });
-            setSavingStatus(prev => ({ ...prev, [jobIndex]: "Saved ✅" }));
+            setIsSaving(false);
           }
         }
 
-        // Clear status message after 2 seconds
+        // Clear saving indicator after a short delay
         setTimeout(() => {
-          setSavingStatus(prev => {
-            const newStatus = { ...prev };
-            delete newStatus[jobIndex];
-            return newStatus;
-          });
-        }, 2000);
+          setIsSaving(false);
+        }, 500);
       }, 800);
 
       return updatedJobs;
@@ -572,14 +543,47 @@ export default function JobTrackerOptimized() {
   );
 
   // Memoized stats calculation
-  const stats = useMemo(() => ({
-    Applied: jobs.filter(j => j.status === "Applied").length,
-    Interviewing: jobs.filter(j => j.status === "Interviewing").length,
-    Rejected: jobs.filter(j => j.status === "Rejected").length,
-    Assessment: jobs.filter(j => j.status === "Assessment").length,
-    Screening: jobs.filter(j => j.status === "Screening").length,
-    Total: jobs.length
-  }), [jobs]);
+  const stats = useMemo(() => {
+    // Calculate most applied day
+    const applicationsByDate = {};
+    jobs.forEach(job => {
+      if (job.appliedDate) {
+        const date = job.appliedDate;
+        applicationsByDate[date] = (applicationsByDate[date] || 0) + 1;
+      }
+    });
+    
+    let mostAppliedDate = null;
+    let maxApplications = 0;
+    Object.entries(applicationsByDate).forEach(([date, count]) => {
+      if (count > maxApplications) {
+        maxApplications = count;
+        mostAppliedDate = date;
+      }
+    });
+    
+    // Format the most applied date
+    let formattedMostAppliedDate = "N/A";
+    if (mostAppliedDate) {
+      const date = new Date(mostAppliedDate);
+      formattedMostAppliedDate = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+    
+    return {
+      Applied: jobs.filter(j => j.status === "Applied").length,
+      Interviewing: jobs.filter(j => j.status === "Interviewing").length,
+      Rejected: jobs.filter(j => j.status === "Rejected").length,
+      Assessment: jobs.filter(j => j.status === "Assessment").length,
+      Screening: jobs.filter(j => j.status === "Screening").length,
+      Total: jobs.length,
+      MostAppliedDate: formattedMostAppliedDate,
+      MostAppliedCount: maxApplications
+    };
+  }, [jobs]);
 
   // Memoized suggestions generation
   const suggestions = useMemo(() => ({
@@ -608,7 +612,7 @@ export default function JobTrackerOptimized() {
   if (isLoading) {
     return (
       <Box minH="100vh" bg={mainBg} py={8}>
-        <Container maxW="container.xl">
+        <Container maxW="full" px={4}>
           <Center h="50vh">
             <VStack spacing={4}>
               <Spinner size="xl" color="brand.500" thickness="4px" />
@@ -622,7 +626,28 @@ export default function JobTrackerOptimized() {
 
   return (
     <Box minH="100vh" bg={mainBg} py={8}>
-      <Container maxW="container.xl">
+      <Container maxW="full" px={4}>
+        {/* Saving Indicator */}
+        {isSaving && (
+          <Box 
+            position="fixed" 
+            top={4} 
+            right={4} 
+            zIndex={1000}
+            bg={bgColor}
+            p={3}
+            borderRadius="md"
+            boxShadow="lg"
+            border="1px solid"
+            borderColor={borderColor}
+          >
+            <HStack spacing={2}>
+              <Spinner size="sm" color="brand.500" />
+              <Text fontSize="sm" color={textColor}>Saving...</Text>
+            </HStack>
+          </Box>
+        )}
+
         {/* Header */}
         <Box bg={bgColor} p={6} borderRadius="lg" mb={8} border="1px solid" borderColor={borderColor}>
           <Flex align="center">
@@ -669,7 +694,7 @@ export default function JobTrackerOptimized() {
 
         {/* Stats */}
         {!filter.trim() && (
-          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4} mb={6}>
+          <SimpleGrid columns={{ base: 2, md: 3, lg: 7 }} spacing={4} mb={6}>
             <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="brand.500">
               <StatLabel>Applied</StatLabel>
               <StatNumber>{stats.Applied}</StatNumber>
@@ -700,6 +725,11 @@ export default function JobTrackerOptimized() {
               <StatNumber>{stats.Total}</StatNumber>
               <StatHelpText>All applications</StatHelpText>
             </Stat>
+            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="purple.500">
+              <StatLabel>Most Applied Day</StatLabel>
+              <StatNumber>{stats.MostAppliedCount}</StatNumber>
+              <StatHelpText>{stats.MostAppliedDate}</StatHelpText>
+            </Stat>
           </SimpleGrid>
         )}
 
@@ -722,14 +752,12 @@ export default function JobTrackerOptimized() {
           <Box bg={bgColor} borderRadius="lg" overflow="hidden" border="1px solid" borderColor={borderColor}>
             <Box p={4} borderBottom="1px solid" borderColor={borderColor}>
               <Flex fontWeight="bold" fontSize="sm" color={subtitleColor}>
-                <Box flex="1" minW="150px" maxW="150px" pr={2}>Company</Box>
-                <Box flex="1" minW="200px" maxW="200px" pr={2}>Position</Box>
-                <Box flex="1" minW="150px" maxW="150px" pr={2}>Location</Box>
-                <Box minW="120px" maxW="120px" pr={2}>Status</Box>
-                <Box minW="120px" maxW="120px" pr={2}>Applied Date</Box>
-                <Box minW="120px" maxW="120px" pr={2}>Rejection Date</Box>
-                <Box minW="80px" maxW="80px">Save Status</Box>
-              </Flex>
+                <Box flex="1" minW="200px" maxW="250px" pr={2}>Company</Box>
+                <Box flex="1" minW="250px" maxW="350px" pr={2}>Position</Box>
+                <Box flex="1" minW="200px" maxW="250px" pr={2}>Location</Box>
+                <Box minW="150px" maxW="180px" pr={2}>Status</Box>
+                <Box minW="150px" maxW="180px" pr={2}>Applied Date</Box>
+                <Box minW="150px" maxW="180px" pr={2}>Rejection Date</Box>              </Flex>
             </Box>
             <List
               height={600}
@@ -738,7 +766,6 @@ export default function JobTrackerOptimized() {
               itemData={{
                 jobs: filteredJobs,
                 updateJobField,
-                savingStatus,
                 suggestions,
                 statusOptions,
                 bgHover: useColorModeValue("gray.50", "gray.700"),
@@ -762,9 +789,7 @@ export default function JobTrackerOptimized() {
                     <Th>Applied Date</Th>
                     <Th>Rejection Date</Th>
                     <Th>Job Site</Th>
-                    <Th>URL</Th>
-                    <Th>Save Status</Th>
-                  </Tr>
+                    <Th>URL</Th>                  </Tr>
                 </Thead>
                 <Tbody>
                   {filteredJobs.map((job) => {
@@ -775,7 +800,6 @@ export default function JobTrackerOptimized() {
                         job={job} 
                         jobIndex={jobIndex}
                         updateJobField={updateJobField}
-                        savingStatus={savingStatus[jobIndex]}
                         suggestions={suggestions}
                         statusOptions={statusOptions}
                         bgHover={useColorModeValue("gray.50", "gray.700")}
@@ -832,14 +856,12 @@ export default function JobTrackerOptimized() {
                         <Box>
                           <Box p={4} borderBottom="1px solid" borderColor={borderColor}>
                             <Flex fontWeight="bold" fontSize="sm" color={subtitleColor}>
-                              <Box flex="1" minW="150px" maxW="150px" pr={2}>Company</Box>
-                              <Box flex="1" minW="200px" maxW="200px" pr={2}>Position</Box>
-                              <Box flex="1" minW="150px" maxW="150px" pr={2}>Location</Box>
-                              <Box minW="120px" maxW="120px" pr={2}>Status</Box>
-                              <Box minW="120px" maxW="120px" pr={2}>Applied Date</Box>
-                              <Box minW="120px" maxW="120px" pr={2}>Rejection Date</Box>
-                              <Box minW="80px" maxW="80px">Save Status</Box>
-                            </Flex>
+                              <Box flex="1" minW="200px" maxW="250px" pr={2}>Company</Box>
+                              <Box flex="1" minW="250px" maxW="350px" pr={2}>Position</Box>
+                              <Box flex="1" minW="200px" maxW="250px" pr={2}>Location</Box>
+                              <Box minW="150px" maxW="180px" pr={2}>Status</Box>
+                              <Box minW="150px" maxW="180px" pr={2}>Applied Date</Box>
+                              <Box minW="150px" maxW="180px" pr={2}>Rejection Date</Box>                                          </Flex>
                           </Box>
                           <List
                             height={400}
@@ -848,7 +870,6 @@ export default function JobTrackerOptimized() {
                             itemData={{
                               jobs: monthJobs,
                               updateJobField,
-                              savingStatus,
                               suggestions,
                               statusOptions,
                               bgHover: useColorModeValue("gray.50", "gray.700"),
@@ -872,7 +893,6 @@ export default function JobTrackerOptimized() {
                                 <Th>Rejection Date</Th>
                                 <Th>Job Site</Th>
                                 <Th>URL</Th>
-                                <Th></Th>
                               </Tr>
                             </Thead>
                             <Tbody>
@@ -884,7 +904,6 @@ export default function JobTrackerOptimized() {
                                     job={job} 
                                     jobIndex={jobIndex}
                                     updateJobField={updateJobField}
-                                    savingStatus={savingStatus[jobIndex]}
                                     suggestions={suggestions}
                                     statusOptions={statusOptions}
                                     bgHover={useColorModeValue("gray.50", "gray.700")}
