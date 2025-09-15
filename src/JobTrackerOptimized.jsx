@@ -126,7 +126,6 @@ const AutocompleteInput = React.memo(({ value, onChange, suggestions = [], place
 // Memoized JobRow component
 const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusOptions }) => {
   const bgHover = useColorModeValue("gray.50", "gray.700");
-
   const handleFieldChange = useCallback((field, value) => {
     updateJobField(job.id, jobIndex, field, value);
   }, [job.id, jobIndex, updateJobField]);
@@ -395,6 +394,7 @@ export default function JobTrackerOptimized() {
   const [jobs, setJobs] = useState([]);
   const [filter, setFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [openMonths, setOpenMonths] = useState([]);
   const [savingStatus, setSavingStatus] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -549,6 +549,13 @@ export default function JobTrackerOptimized() {
     }
   };
 
+  const toggleMonth = (month) => {
+    setOpenMonths(prev =>
+      prev.includes(month)
+        ? prev.filter(m => m !== month)
+        : [...prev, month]
+    );
+  };
   const getMonthYear = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -568,8 +575,6 @@ export default function JobTrackerOptimized() {
     });
     return groups;
   }, [jobs]);
-
-
   // Memoized filtered jobs using search index
   const filteredJobs = useMemo(() => {
     if (!filter.trim()) return jobs;
@@ -586,7 +591,6 @@ export default function JobTrackerOptimized() {
       );
     });
   }, [filter, jobs]);
-
   const unsavedJobs = useMemo(() => 
     jobs.filter(j => !j.appliedDate),
     [jobs]
@@ -654,7 +658,6 @@ export default function JobTrackerOptimized() {
     });
     return map;
   }, [jobs]);
-
   // Debounced search handler
   const handleSearch = useCallback((value) => {
     setSearchInput(value);
@@ -878,7 +881,9 @@ export default function JobTrackerOptimized() {
           </Box>
         ) : (
           /* Lazy Loading Monthly Accordion */
-          <Accordion allowMultiple>
+          <Accordion allowMultiple index={Object.keys(jobsByMonth).map((month, idx) =>
+            openMonths.includes(month) ? idx : -1
+          ).filter(idx => idx !== -1)}>
             {Object.keys(jobsByMonth).map((month) => {
               const monthJobs = jobsByMonth[month];
               // Calculate stats directly without useMemo (can't use hooks inside map)
@@ -900,7 +905,7 @@ export default function JobTrackerOptimized() {
                   borderColor={borderColor}
                 >
                   <h2>
-                    <AccordionButton p={4}>
+                    <AccordionButton onClick={() => toggleMonth(month)} p={4}>
                       <Box flex="1" textAlign="left">
                         <Heading size="md" mb={2}>{month}</Heading>
                         <HStack spacing={3}>
@@ -915,7 +920,8 @@ export default function JobTrackerOptimized() {
                     </AccordionButton>
                   </h2>
                   <AccordionPanel pb={4} px={0}>
-                    {monthJobs.length > 20 ? (
+                    {openMonths.includes(month) && (
+                      monthJobs.length > 20 ? (
                         <Box>
                           <Box p={4} borderBottom="1px solid" borderColor={borderColor}>
                             <Flex fontWeight="bold" fontSize="sm" color={subtitleColor}>
@@ -982,7 +988,7 @@ export default function JobTrackerOptimized() {
                           </Table>
                         </TableContainer>
                       )
-                    }
+                    )}
                   </AccordionPanel>
                 </AccordionItem>
               );
