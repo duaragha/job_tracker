@@ -37,6 +37,7 @@ import {
   Center,
   InputGroup,
   InputLeftElement,
+  Checkbox,
 } from "@chakra-ui/react";
 import { SearchIcon, SunIcon, MoonIcon, AddIcon } from "@chakra-ui/icons";
 
@@ -123,15 +124,105 @@ const AutocompleteInput = React.memo(({ value, onChange, suggestions = [], place
          prevProps.suggestions === nextProps.suggestions;
 });
 
+// Bulk Edit Toolbar Component
+const BulkEditToolbar = React.memo(({
+  selectedCount,
+  bulkEditValues,
+  setBulkEditValues,
+  onApplyBulkEdit,
+  onClearSelection,
+  suggestions,
+  statusOptions
+}) => {
+  const bgColor = useColorModeValue("blue.50", "blue.900");
+  const borderColor = useColorModeValue("blue.200", "blue.600");
+
+  return (
+    <Box
+      p={4}
+      bg={bgColor}
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="lg"
+      mb={4}
+    >
+      <HStack spacing={4} align="flex-start">
+        <Text fontWeight="bold" color="blue.600">
+          {selectedCount} job{selectedCount !== 1 ? 's' : ''} selected
+        </Text>
+
+        <HStack spacing={2} flex={1}>
+          <Select
+            placeholder="Change Status"
+            value={bulkEditValues.status || ""}
+            onChange={(e) => setBulkEditValues(prev => ({ ...prev, status: e.target.value }))}
+            size="sm"
+            maxW="200px"
+          >
+            {statusOptions.map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </Select>
+
+          <Input
+            type="date"
+            placeholder="Applied Date"
+            value={bulkEditValues.appliedDate || ""}
+            onChange={(e) => setBulkEditValues(prev => ({ ...prev, appliedDate: e.target.value }))}
+            size="sm"
+            maxW="150px"
+          />
+
+          <Input
+            type="date"
+            placeholder="Rejection Date"
+            value={bulkEditValues.rejectionDate || ""}
+            onChange={(e) => setBulkEditValues(prev => ({ ...prev, rejectionDate: e.target.value }))}
+            size="sm"
+            maxW="150px"
+          />
+        </HStack>
+
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            colorScheme="blue"
+            onClick={onApplyBulkEdit}
+            isDisabled={Object.keys(bulkEditValues).length === 0}
+          >
+            Apply Changes
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onClearSelection}
+          >
+            Clear Selection
+          </Button>
+        </HStack>
+      </HStack>
+    </Box>
+  );
+});
+
 // Memoized JobRow component
-const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusOptions }) => {
+const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusOptions, selectedJobs, onToggleSelection }) => {
   const bgHover = useColorModeValue("gray.50", "gray.700");
   const handleFieldChange = useCallback((field, value) => {
     updateJobField(job.id, jobIndex, field, value);
   }, [job.id, jobIndex, updateJobField]);
 
+  const isSelected = selectedJobs.has(job.id);
+
   return (
-    <Tr _hover={{ bg: bgHover }}>
+    <Tr _hover={{ bg: bgHover }} bg={isSelected ? useColorModeValue("blue.50", "blue.900") : "transparent"}>
+      <Td>
+        <Checkbox
+          isChecked={isSelected}
+          onChange={() => onToggleSelection(job.id)}
+          colorScheme="blue"
+        />
+      </Td>
       <Td>
         <AutocompleteInput
           value={job.company || ""}
@@ -399,6 +490,9 @@ export default function JobTrackerOptimized() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showVirtualized, setShowVirtualized] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState(new Set());
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [bulkEditValues, setBulkEditValues] = useState({});
   const { colorMode, toggleColorMode } = useColorMode();
   const saveTimeouts = useRef({});
   const searchTimeout = useRef(null);
@@ -547,6 +641,83 @@ export default function JobTrackerOptimized() {
         return newJobs;
       });
     }
+  };
+
+  // Selection handlers
+  const toggleJobSelection = (jobId) => {
+    setSelectedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    const visibleJobIds = filteredJobs.map(job => job.id);
+    setSelectedJobs(new Set(visibleJobIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedJobs(new Set());
+    setShowBulkEdit(false);
+    setBulkEditValues({});
+  };
+
+  // Bulk edit handlers
+  const handleBulkEdit = () => {
+    if (selectedJobs.size > 0) {
+      setShowBulkEdit(true);
+      setBulkEditValues({});
+    }
+  };
+
+  const applyBulkEdit = async () => {
+    if (Object.keys(bulkEditValues).length === 0) return;
+
+    setIsSaving(true);
+    const selectedJobsList = Array.from(selectedJobs);
+
+    // Update UI immediately
+    setJobs(prevJobs => {
+      const updatedJobs = prevJobs.map(job => {
+        if (selectedJobs.has(job.id)) {
+          return { ...job, ...bulkEditValues };
+        }
+        return job;
+      });
+      searchIndex.current.buildIndex(updatedJobs);
+      return updatedJobs;
+    });
+
+    // Prepare sanitized updates
+    const sanitizedUpdates = {
+      ...bulkEditValues,
+      appliedDate: bulkEditValues.appliedDate === "" ? null : bulkEditValues.appliedDate,
+      rejectionDate: bulkEditValues.rejectionDate === "" ? null : bulkEditValues.rejectionDate,
+    };
+
+    // Batch update in database
+    try {
+      for (const jobId of selectedJobsList) {
+        const { error } = await supabase
+          .from("jobs")
+          .update(sanitizedUpdates)
+          .eq("id", jobId);
+
+        if (error) {
+          console.error(`Error updating job ${jobId}:`, error.message);
+        }
+      }
+    } catch (error) {
+      console.error("Error during bulk update:", error);
+    }
+
+    setIsSaving(false);
+    clearSelection();
   };
 
   const toggleMonth = (month) => {
@@ -762,6 +933,19 @@ export default function JobTrackerOptimized() {
           </InputGroup>
         </Box>
 
+        {/* Bulk Edit Toolbar */}
+        {selectedJobs.size > 0 && (
+          <BulkEditToolbar
+            selectedCount={selectedJobs.size}
+            bulkEditValues={bulkEditValues}
+            setBulkEditValues={setBulkEditValues}
+            onApplyBulkEdit={applyBulkEdit}
+            onClearSelection={clearSelection}
+            suggestions={suggestions}
+            statusOptions={statusOptions}
+          />
+        )}
+
         {/* Stats */}
         {!filter.trim() && (
           <SimpleGrid columns={{ base: 2, md: 3, lg: 7 }} spacing={4} mb={6}>
@@ -857,6 +1041,14 @@ export default function JobTrackerOptimized() {
               <Table variant="simple" size="sm">
                 <Thead>
                   <Tr>
+                    <Th>
+                      <Checkbox
+                        isChecked={selectedJobs.size > 0 && selectedJobs.size === filteredJobs.length}
+                        isIndeterminate={selectedJobs.size > 0 && selectedJobs.size < filteredJobs.length}
+                        onChange={(e) => e.target.checked ? selectAll(filteredJobs) : clearSelection()}
+                        colorScheme="blue"
+                      />
+                    </Th>
                     <Th>Company</Th>
                     <Th>Position</Th>
                     <Th>Location</Th>
@@ -870,14 +1062,15 @@ export default function JobTrackerOptimized() {
                   {filteredJobs.map((job) => {
                     const jobIndex = jobs.findIndex(j => j.id === job.id);
                     return (
-                      <JobRow 
+                      <JobRow
                         key={job.id || `filtered-${jobIndex}`}
-                        job={job} 
+                        job={job}
                         jobIndex={jobIndex}
                         updateJobField={updateJobField}
                         suggestions={suggestions}
                         statusOptions={statusOptions}
-                        bgHover={useColorModeValue("gray.50", "gray.700")}
+                        selectedJobs={selectedJobs}
+                        onToggleSelection={toggleJobSelection}
                       />
                     );
                   })}
@@ -965,6 +1158,14 @@ export default function JobTrackerOptimized() {
                           <Table variant="simple" size="sm">
                             <Thead>
                               <Tr>
+                                <Th>
+                                  <Checkbox
+                                    isChecked={selectedJobs.size > 0 && monthJobs.every(job => selectedJobs.has(job.id))}
+                                    isIndeterminate={selectedJobs.size > 0 && monthJobs.some(job => selectedJobs.has(job.id)) && !monthJobs.every(job => selectedJobs.has(job.id))}
+                                    onChange={(e) => e.target.checked ? selectAll(monthJobs) : clearSelection()}
+                                    colorScheme="blue"
+                                  />
+                                </Th>
                                 <Th>Company</Th>
                                 <Th>Position</Th>
                                 <Th>Location</Th>
@@ -979,14 +1180,15 @@ export default function JobTrackerOptimized() {
                               {monthJobs.map((job) => {
                                 const jobIndex = jobs.findIndex(j => j.id === job.id);
                                 return (
-                                  <JobRow 
+                                  <JobRow
                                     key={job.id || `month-${jobIndex}`}
-                                    job={job} 
+                                    job={job}
                                     jobIndex={jobIndex}
                                     updateJobField={updateJobField}
                                     suggestions={suggestions}
                                     statusOptions={statusOptions}
-                                    bgHover={useColorModeValue("gray.50", "gray.700")}
+                                    selectedJobs={selectedJobs}
+                                    onToggleSelection={toggleJobSelection}
                                   />
                                 );
                               })}
