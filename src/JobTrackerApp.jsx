@@ -215,7 +215,13 @@ export default function JobTrackerApp() {
 
     const getMonthYear = (dateStr) => {
         if (!dateStr) return "";
-        const date = new Date(dateStr);
+        // Parse date string as local date to avoid timezone issues
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return "";
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Month is 0-indexed in Date constructor
+        const day = parseInt(parts[2]);
+        const date = new Date(year, month, day);
         if (isNaN(date.getTime())) return "";
         return `${date.toLocaleString("default", { month: "long" })} ${date.getFullYear()}`;
     };
