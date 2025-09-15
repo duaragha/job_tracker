@@ -656,8 +656,8 @@ export default function JobTrackerOptimized() {
     });
   };
 
-  const selectAll = () => {
-    const visibleJobIds = filteredJobs.map(job => job.id);
+  const selectAll = (jobsToSelect = filteredJobs) => {
+    const visibleJobIds = jobsToSelect.map(job => job.id);
     setSelectedJobs(new Set(visibleJobIds));
   };
 
