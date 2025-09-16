@@ -41,6 +41,53 @@ import {
 } from "@chakra-ui/react";
 import { SearchIcon, SunIcon, MoonIcon, AddIcon } from "@chakra-ui/icons";
 
+// Custom DateInput with deferred navigation
+const DateInput = React.memo(({ value, onChange, ...props }) => {
+  const [tempValue, setTempValue] = useState(value);
+  const originalValueRef = useRef(value);
+
+  // Update temp value when external value changes
+  useEffect(() => {
+    setTempValue(value);
+    originalValueRef.current = value;
+  }, [value]);
+
+  const handleChange = (e) => {
+    setTempValue(e.target.value);
+  };
+
+  const handleFocus = () => {
+    originalValueRef.current = value;
+  };
+
+  const handleBlur = () => {
+    // Only trigger onChange if the value actually changed
+    if (tempValue !== originalValueRef.current) {
+      onChange({ target: { value: tempValue } });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      // Revert to original value on Escape
+      setTempValue(originalValueRef.current);
+      e.target.blur();
+    }
+  };
+
+  return (
+    <Input
+      type="date"
+      value={tempValue || ""}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      {...props}
+    />
+  );
+});
+
 // Memoized AutocompleteInput with caching
 const AutocompleteInput = React.memo(({ value, onChange, suggestions = [], placeholder, field, ...props }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -164,8 +211,7 @@ const BulkEditToolbar = React.memo(({
             ))}
           </Select>
 
-          <Input
-            type="date"
+          <DateInput
             placeholder="Applied Date"
             value={bulkEditValues.appliedDate || ""}
             onChange={(e) => setBulkEditValues(prev => ({ ...prev, appliedDate: e.target.value }))}
@@ -173,11 +219,18 @@ const BulkEditToolbar = React.memo(({
             maxW="150px"
           />
 
-          <Input
-            type="date"
+          <DateInput
             placeholder="Rejection Date"
             value={bulkEditValues.rejectionDate || ""}
             onChange={(e) => setBulkEditValues(prev => ({ ...prev, rejectionDate: e.target.value }))}
+            size="sm"
+            maxW="150px"
+          />
+
+          <DateInput
+            placeholder="Status Date"
+            value={bulkEditValues.statusDate || ""}
+            onChange={(e) => setBulkEditValues(prev => ({ ...prev, statusDate: e.target.value }))}
             size="sm"
             maxW="150px"
           />
@@ -207,7 +260,9 @@ const BulkEditToolbar = React.memo(({
 
 // Memoized JobRow component
 const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusOptions, selectedJobs, onToggleSelection }) => {
+  console.log('JobRow rendered with selectedJobs:', selectedJobs, 'onToggleSelection:', onToggleSelection);
   const bgHover = useColorModeValue("gray.50", "gray.700");
+  const selectedBg = useColorModeValue("blue.50", "blue.900");
   const handleFieldChange = useCallback((field, value) => {
     updateJobField(job.id, jobIndex, field, value);
   }, [job.id, jobIndex, updateJobField]);
@@ -215,7 +270,7 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusO
   const isSelected = selectedJobs.has(job.id);
 
   return (
-    <Tr _hover={{ bg: bgHover }} bg={isSelected ? useColorModeValue("blue.50", "blue.900") : "transparent"}>
+    <Tr _hover={{ bg: bgHover }} bg={isSelected ? selectedBg : "transparent"}>
       <Td>
         <Checkbox
           isChecked={isSelected}
@@ -263,21 +318,31 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusO
         </Select>
       </Td>
       <Td>
-        <Input
-          type="date"
+        <DateInput
           value={job.appliedDate || ""}
           onChange={(e) => handleFieldChange("appliedDate", e.target.value)}
           size="md"
         />
       </Td>
       <Td>
-        <Input
-          type="date"
+        <DateInput
           value={job.rejectionDate || ""}
           onChange={(e) => handleFieldChange("rejectionDate", e.target.value)}
           size="md"
         />
       </Td>
+      {job.status && !['Applied', 'Rejected'].includes(job.status) && (
+        <Td>
+          <DateInput
+            value={job.statusDate || ""}
+            onChange={(e) => handleFieldChange("statusDate", e.target.value)}
+            size="md"
+          />
+        </Td>
+      )}
+      {(!job.status || ['Applied', 'Rejected'].includes(job.status)) && (
+        <Td></Td>
+      )}
       <Td>
         <AutocompleteInput
           value={job.jobSite || ""}
@@ -307,6 +372,7 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusO
                   prevProps.job.status === nextProps.job.status &&
                   prevProps.job.appliedDate === nextProps.job.appliedDate &&
                   prevProps.job.rejectionDate === nextProps.job.rejectionDate &&
+                  prevProps.job.statusDate === nextProps.job.statusDate &&
                   prevProps.job.jobSite === nextProps.job.jobSite &&
                   prevProps.job.url === nextProps.job.url;
 
@@ -317,17 +383,34 @@ const JobRow = React.memo(({ job, jobIndex, updateJobField, suggestions, statusO
 
 // Virtual scrolling row renderer
 const VirtualRow = React.memo(({ index, style, data }) => {
-  const { jobs, updateJobField, suggestions, statusOptions, bgHover, borderColor, allJobs, jobIndexMap } = data;
+  const { jobs, updateJobField, suggestions, statusOptions, bgHover, borderColor, allJobs, jobIndexMap, selectedJobs, onToggleSelection, selectedBg } = data;
   const job = jobs[index];
   // Use pre-computed job index map for O(1) lookup instead of O(n) findIndex
   const actualJobIndex = jobIndexMap ? jobIndexMap.get(job.id) : (allJobs ? allJobs.findIndex(j => j.id === job.id) : index);
+  const isSelected = selectedJobs ? selectedJobs.has(job.id) : false;
 
   const handleFieldChange = useCallback((field, value) => {
     updateJobField(job.id, actualJobIndex, field, value);
   }, [job.id, actualJobIndex, updateJobField]);
 
   return (
-    <Box style={style} display="flex" alignItems="center" px={4} borderBottom="1px solid" borderColor={borderColor} _hover={{ bg: bgHover }}>
+    <Box
+      style={style}
+      display="flex"
+      alignItems="center"
+      px={4}
+      borderBottom="1px solid"
+      borderColor={borderColor}
+      _hover={{ bg: bgHover }}
+      bg={isSelected ? selectedBg : "transparent"}
+    >
+      <Box minW="50px" maxW="50px" pr={2}>
+        <Checkbox
+          isChecked={isSelected}
+          onChange={() => onToggleSelection && onToggleSelection(job.id)}
+          colorScheme="blue"
+        />
+      </Box>
       <Box flex="1" minW="200px" maxW="250px" pr={2}>
         <AutocompleteInput
           value={job.company || ""}
@@ -368,21 +451,30 @@ const VirtualRow = React.memo(({ index, style, data }) => {
         </Select>
       </Box>
       <Box minW="150px" maxW="180px" pr={2}>
-        <Input
-          type="date"
+        <DateInput
           value={job.appliedDate || ""}
           onChange={(e) => handleFieldChange("appliedDate", e.target.value)}
           size="md"
         />
       </Box>
       <Box minW="150px" maxW="180px" pr={2}>
-        <Input
-          type="date"
+        <DateInput
           value={job.rejectionDate || ""}
           onChange={(e) => handleFieldChange("rejectionDate", e.target.value)}
           size="md"
         />
       </Box>
+      {job.status && !['Applied', 'Rejected'].includes(job.status) ? (
+        <Box minW="150px" maxW="180px" pr={2}>
+          <DateInput
+            value={job.statusDate || ""}
+            onChange={(e) => handleFieldChange("statusDate", e.target.value)}
+            size="md"
+          />
+        </Box>
+      ) : (
+        <Box minW="150px" maxW="180px" pr={2}></Box>
+      )}
       <Box flex="1" minW="200px" maxW="250px" pr={2}>
         <AutocompleteInput
           value={job.jobSite || ""}
@@ -412,10 +504,12 @@ const VirtualRow = React.memo(({ index, style, data }) => {
                   prevProps.data.jobs[prevProps.index]?.status === nextProps.data.jobs[nextProps.index]?.status &&
                   prevProps.data.jobs[prevProps.index]?.appliedDate === nextProps.data.jobs[nextProps.index]?.appliedDate &&
                   prevProps.data.jobs[prevProps.index]?.rejectionDate === nextProps.data.jobs[nextProps.index]?.rejectionDate &&
+                  prevProps.data.jobs[prevProps.index]?.statusDate === nextProps.data.jobs[nextProps.index]?.statusDate &&
                   prevProps.data.jobs[prevProps.index]?.jobSite === nextProps.data.jobs[nextProps.index]?.jobSite &&
                   prevProps.data.jobs[prevProps.index]?.url === nextProps.data.jobs[nextProps.index]?.url;
 
-  const dataEqual = prevProps.data.suggestions === nextProps.data.suggestions;
+  const dataEqual = prevProps.data.suggestions === nextProps.data.suggestions &&
+                   prevProps.data.selectedJobs === nextProps.data.selectedJobs;
 
   return jobEqual && dataEqual && prevProps.index === nextProps.index;
 });
@@ -478,6 +572,8 @@ export default function JobTrackerOptimized() {
     "Applied",
     "Assessment",
     "Interviewing",
+    "Offer",
+    "Accepted",
     "Rejected",
     "Screening",
   ];
@@ -494,7 +590,7 @@ export default function JobTrackerOptimized() {
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkEditValues, setBulkEditValues] = useState({});
   const { colorMode, toggleColorMode } = useColorMode();
-  const saveTimeouts = useRef({});
+  const saveTimeouts = useRef(new Map());
   const searchTimeout = useRef(null);
   const searchIndex = useRef(new SearchIndex());
 
@@ -540,6 +636,14 @@ export default function JobTrackerOptimized() {
 
     // Update UI immediately with proper immutability
     setJobs(prevJobs => {
+      // If status is changed and no statusDate exists, set status date to today
+      // This allows users to manually set statusDate for any status including "Accepted" or "Rejected"
+      if (key === 'status' && value) {
+        const currentJob = prevJobs[jobIndex];
+        if (!currentJob.statusDate) {
+          additionalUpdates.statusDate = new Date().toISOString().split('T')[0];
+        }
+      }
       const updatedJobs = [...prevJobs];
       // Create a completely new object to ensure React detects the change
       updatedJobs[jobIndex] = {
@@ -551,8 +655,8 @@ export default function JobTrackerOptimized() {
       };
 
       // Clear existing timeout
-      if (saveTimeouts.current[jobIndex]) {
-        clearTimeout(saveTimeouts.current[jobIndex]);
+      if (saveTimeouts.current.has(jobId)) {
+        clearTimeout(saveTimeouts.current.get(jobId));
       }
 
       // Show saving status
@@ -562,7 +666,8 @@ export default function JobTrackerOptimized() {
       searchIndex.current.buildIndex(updatedJobs);
 
       // Debounce save to database
-      saveTimeouts.current[jobIndex] = setTimeout(async () => {
+      const timeoutId = setTimeout(async () => {
+        saveTimeouts.current.delete(jobId);
         const jobToSave = updatedJobs[jobIndex];
 
         // Remove the lastModified timestamp before saving to database
@@ -570,6 +675,7 @@ export default function JobTrackerOptimized() {
           ...jobToSave,
           appliedDate: jobToSave.appliedDate === "" ? null : jobToSave.appliedDate,
           rejectionDate: jobToSave.rejectionDate === "" ? null : jobToSave.rejectionDate,
+          statusDate: jobToSave.statusDate === "" ? null : jobToSave.statusDate,
         };
 
         if (jobId) {
@@ -612,6 +718,8 @@ export default function JobTrackerOptimized() {
         }, 500);
       }, 800);
 
+      saveTimeouts.current.set(jobId, timeoutId);
+
       return updatedJobs;
     });
   }, []);
@@ -625,6 +733,7 @@ export default function JobTrackerOptimized() {
       status: "Applied",
       appliedDate: today,
       rejectionDate: null,
+      statusDate: today,
       jobSite: "",
       url: "",
       created_at: new Date().toISOString(),
@@ -698,6 +807,7 @@ export default function JobTrackerOptimized() {
       ...bulkEditValues,
       appliedDate: bulkEditValues.appliedDate === "" ? null : bulkEditValues.appliedDate,
       rejectionDate: bulkEditValues.rejectionDate === "" ? null : bulkEditValues.rejectionDate,
+      statusDate: bulkEditValues.statusDate === "" ? null : bulkEditValues.statusDate,
     };
 
     // Batch update in database
@@ -740,10 +850,18 @@ export default function JobTrackerOptimized() {
     return `${date.toLocaleString("default", { month: "long" })} ${date.getFullYear()}`;
   };
 
-  // Memoized grouping by month
+  // Memoized accepted jobs
+  const acceptedJobs = useMemo(() => {
+    return jobs.filter(job => job.status === "Accepted");
+  }, [jobs]);
+
+  // Memoized grouping by month (excluding accepted jobs)
   const jobsByMonth = useMemo(() => {
     const groups = {};
     jobs.forEach(job => {
+      // Exclude accepted jobs from monthly grouping
+      if (job.status === "Accepted") return;
+
       const month = getMonthYear(job.appliedDate);
       if (month) {
         if (!groups[month]) groups[month] = [];
@@ -797,22 +915,62 @@ export default function JobTrackerOptimized() {
     let formattedMostAppliedDate = "N/A";
     if (mostAppliedDate) {
       const date = new Date(mostAppliedDate);
-      formattedMostAppliedDate = date.toLocaleDateString('en-US', { 
-        month: 'short', 
+      formattedMostAppliedDate = date.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
     }
-    
+
+    // Calculate Time to Job for accepted jobs
+    let timeToJob = "N/A";
+    const acceptedJobs = jobs.filter(j => j.status === "Accepted" && j.appliedDate);
+    if (acceptedJobs.length > 0) {
+      // Find the first application date and the accepted date
+      const firstApplicationDate = jobs
+        .filter(j => j.appliedDate)
+        .map(j => new Date(j.appliedDate))
+        .sort((a, b) => a - b)[0];
+
+      // Get the earliest accepted job's status date (or creation date if no status date)
+      const earliestAcceptedJob = acceptedJobs
+        .map(j => ({
+          ...j,
+          acceptedDate: j.statusDate || j.created_at?.split('T')[0] || j.appliedDate
+        }))
+        .sort((a, b) => new Date(a.acceptedDate) - new Date(b.acceptedDate))[0];
+
+      if (firstApplicationDate && earliestAcceptedJob) {
+        const acceptedDate = new Date(earliestAcceptedJob.acceptedDate);
+        const diffTime = acceptedDate - firstApplicationDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 0) {
+          const months = Math.floor(diffDays / 30);
+          const weeks = Math.floor((diffDays % 30) / 7);
+          const days = diffDays % 7;
+
+          let timeString = `${diffDays} days`;
+          if (months > 0 || weeks > 0) {
+            timeString += ` (${months}m ${weeks}w)`;
+          }
+          timeToJob = timeString;
+        }
+      }
+    }
+
     return {
       Applied: jobs.filter(j => j.status === "Applied").length,
       Interviewing: jobs.filter(j => j.status === "Interviewing").length,
       Rejected: jobs.filter(j => j.status === "Rejected").length,
       Assessment: jobs.filter(j => j.status === "Assessment").length,
       Screening: jobs.filter(j => j.status === "Screening").length,
+      Offer: jobs.filter(j => j.status === "Offer").length,
+      Accepted: jobs.filter(j => j.status === "Accepted").length,
       Total: jobs.length,
       MostAppliedDate: formattedMostAppliedDate,
-      MostAppliedCount: maxApplications
+      MostAppliedCount: maxApplications,
+      TimeToJob: timeToJob
     };
   }, [jobs]);
 
@@ -948,41 +1106,56 @@ export default function JobTrackerOptimized() {
 
         {/* Stats */}
         {!filter.trim() && (
-          <SimpleGrid columns={{ base: 2, md: 3, lg: 7 }} spacing={4} mb={6}>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="brand.500">
-              <StatLabel>Applied</StatLabel>
-              <StatNumber>{stats.Applied}</StatNumber>
-              <StatHelpText>{stats.Total > 0 ? ((stats.Applied / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+          <SimpleGrid columns={{ base: 2, md: 5, lg: 10 }} spacing={2} mb={6}>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="brand.500">
+              <StatLabel fontSize="xs">Applied</StatLabel>
+              <StatNumber fontSize="lg">{stats.Applied}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Applied / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
-              <StatLabel>Interviewing</StatLabel>
-              <StatNumber>{stats.Interviewing}</StatNumber>
-              <StatHelpText>{stats.Total > 0 ? ((stats.Interviewing / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
+              <StatLabel fontSize="xs">Interviewing</StatLabel>
+              <StatNumber fontSize="lg">{stats.Interviewing}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Interviewing / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="red.500">
-              <StatLabel>Rejected</StatLabel>
-              <StatNumber>{stats.Rejected}</StatNumber>
-              <StatHelpText>{stats.Total > 0 ? ((stats.Rejected / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="red.500">
+              <StatLabel fontSize="xs">Rejected</StatLabel>
+              <StatNumber fontSize="lg">{stats.Rejected}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Rejected / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
-              <StatLabel>Assessment</StatLabel>
-              <StatNumber>{stats.Assessment}</StatNumber>
-              <StatHelpText>{stats.Total > 0 ? ((stats.Assessment / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
+              <StatLabel fontSize="xs">Assessment</StatLabel>
+              <StatNumber fontSize="lg">{stats.Assessment}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Assessment / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="blue.500">
-              <StatLabel>Screening</StatLabel>
-              <StatNumber>{stats.Screening}</StatNumber>
-              <StatHelpText>{stats.Total > 0 ? ((stats.Screening / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="blue.500">
+              <StatLabel fontSize="xs">Screening</StatLabel>
+              <StatNumber fontSize="lg">{stats.Screening}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Screening / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="gray.600">
-              <StatLabel>Total Jobs</StatLabel>
-              <StatNumber>{stats.Total}</StatNumber>
-              <StatHelpText>All applications</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="yellow.500">
+              <StatLabel fontSize="xs">Offer</StatLabel>
+              <StatNumber fontSize="lg">{stats.Offer}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Offer / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
             </Stat>
-            <Stat bg={bgColor} p={4} borderRadius="lg" borderLeft="4px solid" borderLeftColor="purple.500">
-              <StatLabel>Most Applied Day</StatLabel>
-              <StatNumber>{stats.MostAppliedCount}</StatNumber>
-              <StatHelpText>{stats.MostAppliedDate}</StatHelpText>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="teal.500">
+              <StatLabel fontSize="xs">Accepted</StatLabel>
+              <StatNumber fontSize="lg">{stats.Accepted}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.Total > 0 ? ((stats.Accepted / stats.Total) * 100).toFixed(1) : 0}%</StatHelpText>
+            </Stat>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="gray.600">
+              <StatLabel fontSize="xs">Total Jobs</StatLabel>
+              <StatNumber fontSize="lg">{stats.Total}</StatNumber>
+              <StatHelpText fontSize="xs">All applications</StatHelpText>
+            </Stat>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="purple.500">
+              <StatLabel fontSize="xs">Most Applied Day</StatLabel>
+              <StatNumber fontSize="lg">{stats.MostAppliedCount}</StatNumber>
+              <StatHelpText fontSize="xs">{stats.MostAppliedDate}</StatHelpText>
+            </Stat>
+            <Stat bg={bgColor} p={3} borderRadius="lg" borderLeft="4px solid" borderLeftColor="cyan.500">
+              <StatLabel fontSize="xs">Time to Job</StatLabel>
+              <StatNumber fontSize="sm">{stats.TimeToJob}</StatNumber>
+              <StatHelpText fontSize="xs">First app to accepted</StatHelpText>
             </Stat>
           </SimpleGrid>
         )}
@@ -1001,17 +1174,79 @@ export default function JobTrackerOptimized() {
           </Box>
         )}
 
+        {/* Accepted Jobs Section */}
+        {!filter.trim() && acceptedJobs.length > 0 && (
+          <Box bg={bgColor} borderRadius="lg" overflow="hidden" border="1px solid" borderColor={borderColor} mb={6}>
+            <Box p={4} borderBottom="1px solid" borderColor={borderColor} bg={useColorModeValue("green.50", "green.900")}>
+              <Heading size="md" color={headingColor}>
+                🎉 Accepted Jobs ({acceptedJobs.length})
+              </Heading>
+            </Box>
+            <TableContainer>
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>
+                      <Checkbox
+                        isChecked={selectedJobs.size > 0 && acceptedJobs.every(job => selectedJobs.has(job.id))}
+                        isIndeterminate={selectedJobs.size > 0 && acceptedJobs.some(job => selectedJobs.has(job.id)) && !acceptedJobs.every(job => selectedJobs.has(job.id))}
+                        onChange={(e) => e.target.checked ? selectAll(acceptedJobs) : clearSelection()}
+                        colorScheme="blue"
+                      />
+                    </Th>
+                    <Th>Company</Th>
+                    <Th>Position</Th>
+                    <Th>Location</Th>
+                    <Th>Status</Th>
+                    <Th>Applied Date</Th>
+                    <Th>Rejection Date</Th>
+                    <Th>Status Date</Th>
+                    <Th>Job Site</Th>
+                    <Th>URL</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {acceptedJobs.map((job) => {
+                    const jobIndex = jobs.findIndex(j => j.id === job.id);
+                    return (
+                      <JobRow
+                        key={job.id || `accepted-${jobIndex}`}
+                        job={job}
+                        jobIndex={jobIndex}
+                        updateJobField={updateJobField}
+                        suggestions={suggestions}
+                        statusOptions={statusOptions}
+                        selectedJobs={selectedJobs}
+                        onToggleSelection={toggleJobSelection}
+                      />
+                    );
+                  })}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
         {/* Filtered Results with Virtual Scrolling */}
         {filter.trim() && filteredJobs.length > 50 ? (
           <Box bg={bgColor} borderRadius="lg" overflow="hidden" border="1px solid" borderColor={borderColor}>
             <Box p={4} borderBottom="1px solid" borderColor={borderColor}>
               <Flex fontWeight="bold" fontSize="sm" color={subtitleColor}>
+                <Box minW="50px" maxW="50px" pr={2}>
+                  <Checkbox
+                    isChecked={selectedJobs.size > 0 && selectedJobs.size === filteredJobs.length}
+                    isIndeterminate={selectedJobs.size > 0 && selectedJobs.size < filteredJobs.length}
+                    onChange={(e) => e.target.checked ? selectAll(filteredJobs) : clearSelection()}
+                    colorScheme="blue"
+                  />
+                </Box>
                 <Box flex="1" minW="200px" maxW="250px" pr={2}>Company</Box>
                 <Box flex="1" minW="250px" maxW="350px" pr={2}>Position</Box>
                 <Box flex="1" minW="200px" maxW="250px" pr={2}>Location</Box>
                 <Box minW="150px" maxW="180px" pr={2}>Status</Box>
                 <Box minW="150px" maxW="180px" pr={2}>Applied Date</Box>
                 <Box minW="150px" maxW="180px" pr={2}>Rejection Date</Box>
+                <Box minW="150px" maxW="180px" pr={2}>Status Date</Box>
                 <Box flex="1" minW="200px" maxW="250px" pr={2}>Job Site</Box>
                 <Box flex="1" minW="300px" pr={2}>URL</Box>
               </Flex>
@@ -1027,8 +1262,11 @@ export default function JobTrackerOptimized() {
                 suggestions,
                 statusOptions,
                 bgHover: useColorModeValue("gray.50", "gray.700"),
+                selectedBg: useColorModeValue("blue.50", "blue.900"),
                 borderColor: borderColor,
-                jobIndexMap: jobIndexMap
+                jobIndexMap: jobIndexMap,
+                selectedJobs: selectedJobs,
+                onToggleSelection: toggleJobSelection
               }}
               overscanCount={5}
             >
@@ -1055,6 +1293,7 @@ export default function JobTrackerOptimized() {
                     <Th>Status</Th>
                     <Th>Applied Date</Th>
                     <Th>Rejection Date</Th>
+                    <Th>Status Date</Th>
                     <Th>Job Site</Th>
                     <Th>URL</Th>                  </Tr>
                 </Thead>
@@ -1092,6 +1331,7 @@ export default function JobTrackerOptimized() {
                 Rejected: monthJobs.filter(j => j.status === "Rejected").length,
                 Assessment: monthJobs.filter(j => j.status === "Assessment").length,
                 Screening: monthJobs.filter(j => j.status === "Screening").length,
+                Offer: monthJobs.filter(j => j.status === "Offer").length,
               };
 
               return (
@@ -1113,6 +1353,7 @@ export default function JobTrackerOptimized() {
                           <Badge colorScheme="red">Rejected: {monthStats.Rejected}</Badge>
                           <Badge colorScheme="orange">Assessment: {monthStats.Assessment}</Badge>
                           <Badge colorScheme="cyan">Screening: {monthStats.Screening}</Badge>
+                          <Badge colorScheme="yellow">Offer: {monthStats.Offer}</Badge>
                         </HStack>
                       </Box>
                       <AccordionIcon />
@@ -1124,12 +1365,21 @@ export default function JobTrackerOptimized() {
                         <Box>
                           <Box p={4} borderBottom="1px solid" borderColor={borderColor}>
                             <Flex fontWeight="bold" fontSize="sm" color={subtitleColor}>
+                              <Box minW="50px" maxW="50px" pr={2}>
+                                <Checkbox
+                                  isChecked={selectedJobs.size > 0 && monthJobs.every(job => selectedJobs.has(job.id))}
+                                  isIndeterminate={selectedJobs.size > 0 && monthJobs.some(job => selectedJobs.has(job.id)) && !monthJobs.every(job => selectedJobs.has(job.id))}
+                                  onChange={(e) => e.target.checked ? selectAll(monthJobs) : clearSelection()}
+                                  colorScheme="blue"
+                                />
+                              </Box>
                               <Box flex="1" minW="200px" maxW="250px" pr={2}>Company</Box>
                               <Box flex="1" minW="250px" maxW="350px" pr={2}>Position</Box>
                               <Box flex="1" minW="200px" maxW="250px" pr={2}>Location</Box>
                               <Box minW="150px" maxW="180px" pr={2}>Status</Box>
                               <Box minW="150px" maxW="180px" pr={2}>Applied Date</Box>
                               <Box minW="150px" maxW="180px" pr={2}>Rejection Date</Box>
+                              <Box minW="150px" maxW="180px" pr={2}>Status Date</Box>
                               <Box flex="1" minW="200px" maxW="250px" pr={2}>Job Site</Box>
                               <Box flex="1" minW="300px" pr={2}>URL</Box>
                             </Flex>
@@ -1145,8 +1395,11 @@ export default function JobTrackerOptimized() {
                               suggestions,
                               statusOptions,
                               bgHover: useColorModeValue("gray.50", "gray.700"),
+                              selectedBg: useColorModeValue("blue.50", "blue.900"),
                               borderColor: borderColor,
-                              jobIndexMap: jobIndexMap
+                              jobIndexMap: jobIndexMap,
+                              selectedJobs: selectedJobs,
+                              onToggleSelection: toggleJobSelection
                             }}
                             overscanCount={3}
                           >
@@ -1172,6 +1425,7 @@ export default function JobTrackerOptimized() {
                                 <Th>Status</Th>
                                 <Th>Applied Date</Th>
                                 <Th>Rejection Date</Th>
+                                <Th>Status Date</Th>
                                 <Th>Job Site</Th>
                                 <Th>URL</Th>
                               </Tr>
