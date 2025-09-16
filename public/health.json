@@ -1,0 +1,13 @@
+{
+  "status": "healthy",
+  "timestamp": "{{ timestamp }}",
+  "service": "job-tracker",
+  "version": "1.0.0",
+  "environment": "production",
+  "uptime": "{{ uptime }}",
+  "checks": {
+    "database": "ok",
+    "frontend": "ok",
+    "build": "ok"
+  }
+}

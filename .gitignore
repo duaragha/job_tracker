@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Backup files
+backup/
+*.backup.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +33,35 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Temporary files
+tmp/
+temp/
+
+# Session files (excluding from version control for security)
+.hive-mind/sessions/
+.hive-mind/hive.db-wal
+.hive-mind/hive.db-shm
+
+# Swarm database files
+.swarm/memory.db-wal
+.swarm/memory.db-shm
+
+# Claude Flow metrics (dynamic data)
+.claude-flow/metrics/*.json
+
+# Railway files (keep configuration, exclude runtime)
+.railway/
+
+# Deployment artifacts
+deployment-logs/

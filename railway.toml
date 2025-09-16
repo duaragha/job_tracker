@@ -1,0 +1,51 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm run preview"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+# Environment variables that will be set during build
+[env]
+NODE_ENV = "production"
+
+# Build settings
+[build.nixpacksConfig]
+aptPackages = []
+nixpacksVersion = "1.14.0"
+
+# Network configuration
+[experimental]
+configAsCode = true
+
+# Health check configuration
+[healthcheck]
+path = "/"
+port = "$PORT"
+interval = 30
+timeout = 10
+retries = 3
+startPeriod = 60
+
+# Resource allocation
+[resources]
+cpu = 1000  # 1 vCPU
+memory = 1024  # 1GB RAM
+
+# Auto-deployment configuration
+[github]
+autoMerge = false
+autoDeploy = true
+branch = "railway-deployment"
+
+# Domain configuration
+[domains]
+# Custom domain will be configured through Railway dashboard
+
+# Logging configuration
+[logging]
+level = "info"
+format = "json"
