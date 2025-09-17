@@ -2,7 +2,7 @@
   "name": "job_tracker",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "type": "commonjs",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
